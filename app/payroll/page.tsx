@@ -1,0 +1,433 @@
+'use client';
+
+import { useState, useMemo } from "react";
+import { useQuery, useMutation } from "@apollo/client/react";
+import { ColumnDef } from "@tanstack/react-table";
+import { DataTable } from "../../components/table/DataTable";
+import { GET_ALL_PAYROLL } from "../../graphql/query/payroll";
+import { CREATE_PAYROLL } from "../../graphql/mutation/createPayroll";
+import { UPDATE_PAYROLL } from "../../graphql/mutation/updatePayroll";
+import { DELETE_PAYROLL } from "../../graphql/mutation/deletePayroll";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type Payroll = {
+  payrollId: string;
+  employeeId: string;
+  month: string;
+  basicSalary: number;
+  bonus: number;
+  deductions: number;
+  netSalary: number;
+  paymentStatus: string;
+};
+
+type GetAllPayrollResult = {
+  getAllPayroll?: {
+    data?: {
+      payroll?: Payroll[];
+    };
+  };
+};
+
+// ─── Mock Data (fallback when GraphQL is not connected) ───────────────────────
+
+const MOCK_PAYROLL: Payroll[] = [
+  { payrollId: "1", employeeId: "EMP001", month: "2026-06", basicSalary: 5000, bonus: 500, deductions: 200, netSalary: 5300, paymentStatus: "Paid" },
+  { payrollId: "2", employeeId: "EMP002", month: "2026-06", basicSalary: 6000, bonus: 0,   deductions: 300, netSalary: 5700, paymentStatus: "Pending" },
+  { payrollId: "3", employeeId: "EMP003", month: "2026-06", basicSalary: 4500, bonus: 200, deductions: 100, netSalary: 4600, paymentStatus: "Paid" },
+  { payrollId: "4", employeeId: "EMP004", month: "2026-05", basicSalary: 5500, bonus: 100, deductions: 150, netSalary: 5450, paymentStatus: "Paid" },
+];
+
+// ─── Empty form state ─────────────────────────────────────────────────────────
+
+const EMPTY_FORM: Omit<Payroll, "payrollId"> = {
+  employeeId: "",
+  month: new Date().toISOString().slice(0, 7), // YYYY-MM
+  basicSalary: 0,
+  bonus: 0,
+  deductions: 0,
+  netSalary: 0,
+  paymentStatus: "Pending",
+};
+
+// ─── Status Badge ─────────────────────────────────────────────────────────────
+
+function StatusBadge({ status }: { status: string }) {
+  const colors: Record<string, string> = {
+    Paid:    "bg-green-100 text-green-800",
+    Pending: "bg-yellow-100 text-yellow-800",
+    Failed:  "bg-red-100 text-red-800",
+  };
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${colors[status] ?? "bg-muted text-muted-foreground"}`}>
+      {status}
+    </span>
+  );
+}
+
+// ─── Payroll Drawer (right-side form panel) ──────────────────────────────────
+
+function PayrollDrawer({
+  open, mode, form, onClose, onChange, onSave, saving,
+}: {
+  open: boolean;
+  mode: "add" | "edit";
+  form: Omit<Payroll, "payrollId">;
+  onClose: () => void;
+  onChange: (field: keyof typeof EMPTY_FORM, value: string | number) => void;
+  onSave: () => void;
+  saving: boolean;
+}) {
+  // Auto-calculate net salary when inputs change
+  const calculatedNet = useMemo(() => {
+    const b = Number(form.basicSalary) || 0;
+    const bo = Number(form.bonus) || 0;
+    const d = Number(form.deductions) || 0;
+    return b + bo - d;
+  }, [form.basicSalary, form.bonus, form.deductions]);
+
+  // Sync calculated net salary to form if it differs
+  if (form.netSalary !== calculatedNet) {
+    onChange("netSalary", calculatedNet);
+  }
+
+  return (
+    <>
+      {open && <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} aria-hidden="true" />}
+      <div
+        className={`fixed right-0 top-0 z-50 flex h-full w-full sm:w-[400px] flex-col border-l border-border bg-background shadow-xl transition-transform duration-200 ${
+          open ? "translate-x-0" : "translate-x-full"
+        }`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={mode === "add" ? "Add Payroll" : "Edit Payroll"}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-border p-4">
+          <h2 className="text-base font-semibold text-foreground">
+            {mode === "add" ? "Add Payroll" : "Edit Payroll"}
+          </h2>
+          <button onClick={onClose} className="rounded border border-border px-2 py-1 text-sm" aria-label="Close">×</button>
+        </div>
+
+        {/* Form */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-foreground">Employee ID</label>
+            <input
+              type="text"
+              value={form.employeeId}
+              onChange={(e) => onChange("employeeId", e.target.value)}
+              className="h-9 rounded border border-border bg-background px-3 text-sm text-foreground"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-foreground">Month (YYYY-MM)</label>
+            <input
+              type="month"
+              value={form.month}
+              onChange={(e) => onChange("month", e.target.value)}
+              className="h-9 rounded border border-border bg-background px-3 text-sm text-foreground"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-foreground">Basic Salary</label>
+            <input
+              type="number"
+              value={form.basicSalary}
+              onChange={(e) => onChange("basicSalary", Number(e.target.value))}
+              className="h-9 rounded border border-border bg-background px-3 text-sm text-foreground"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-foreground">Bonus</label>
+            <input
+              type="number"
+              value={form.bonus}
+              onChange={(e) => onChange("bonus", Number(e.target.value))}
+              className="h-9 rounded border border-border bg-background px-3 text-sm text-foreground"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-foreground">Deductions</label>
+            <input
+              type="number"
+              value={form.deductions}
+              onChange={(e) => onChange("deductions", Number(e.target.value))}
+              className="h-9 rounded border border-border bg-background px-3 text-sm text-foreground"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-foreground">Net Salary</label>
+            <input
+              type="number"
+              value={calculatedNet}
+              disabled
+              className="h-9 rounded border border-border bg-muted px-3 text-sm text-foreground cursor-not-allowed"
+            />
+            <p className="text-xs text-muted-foreground mt-1">Calculated automatically (Basic + Bonus - Deductions).</p>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-foreground">Payment Status</label>
+            <select
+              value={form.paymentStatus}
+              onChange={(e) => onChange("paymentStatus", e.target.value)}
+              className="h-9 rounded border border-border bg-background px-3 text-sm text-foreground"
+            >
+              {["Pending", "Paid", "Failed"].map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 border-t border-border p-4">
+          <button onClick={onClose} className="rounded border border-border px-4 py-2 text-sm">
+            Cancel
+          </button>
+          <button
+            onClick={onSave}
+            disabled={saving}
+            className="rounded bg-foreground px-4 py-2 text-sm text-background disabled:opacity-60"
+          >
+            {saving ? "Saving…" : mode === "add" ? "Save Record" : "Save Changes"}
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
+export default function PayrollPage() {
+  const [drawerOpen, setDrawerOpen]   = useState(false);
+  const [drawerMode, setDrawerMode]   = useState<"add" | "edit">("add");
+  const [editingId,  setEditingId]    = useState<string | null>(null);
+  const [form,       setForm]         = useState<Omit<Payroll, "payrollId">>(EMPTY_FORM);
+  const [saving,     setSaving]       = useState(false);
+  const [localData,  setLocalData]    = useState<Payroll[]>(MOCK_PAYROLL);
+
+  // ── GraphQL hooks ────────────────────────────────────────────────────────────
+  const { data, refetch } = useQuery<GetAllPayrollResult>(GET_ALL_PAYROLL, {
+    variables: { request: { pageCriteria: { enablePage: false, pageSize: 1000, skip: 0 } } },
+    errorPolicy: "ignore",
+  });
+  const [createPayroll] = useMutation(CREATE_PAYROLL);
+  const [updatePayroll] = useMutation(UPDATE_PAYROLL);
+  const [deletePayroll] = useMutation(DELETE_PAYROLL);
+
+  // Use live data if available, otherwise use local state (mock or optimistic)
+  const payrollData: Payroll[] = data?.getAllPayroll?.data?.payroll ?? localData;
+
+  // ── Handlers ─────────────────────────────────────────────────────────────────
+
+  function openAdd() {
+    setForm(EMPTY_FORM);
+    setDrawerMode("add");
+    setEditingId(null);
+    setDrawerOpen(true);
+  }
+
+  function openEdit(record: Payroll) {
+    const { payrollId, ...rest } = record;
+    setForm(rest);
+    setEditingId(payrollId);
+    setDrawerMode("edit");
+    setDrawerOpen(true);
+  }
+
+  function closeDrawer() {
+    setDrawerOpen(false);
+  }
+
+  function handleFieldChange(field: keyof typeof EMPTY_FORM, value: string | number) {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      if (drawerMode === "add") {
+        await createPayroll({
+          variables: { request: { requestParam: form } },
+        }).catch(() => {
+          // Optimistic local update when backend unavailable
+          setLocalData((prev) => [
+            ...prev,
+            { ...form, payrollId: `local-${Date.now()}` },
+          ]);
+        });
+      } else if (editingId) {
+        await updatePayroll({
+          variables: { request: { requestParam: { ...form, payrollId: editingId } } },
+        }).catch(() => {
+          setLocalData((prev) =>
+            prev.map((p) => (p.payrollId === editingId ? { ...form, payrollId: editingId } : p))
+          );
+        });
+      }
+      await refetch().catch(() => {});
+    } finally {
+      setSaving(false);
+      closeDrawer();
+    }
+  }
+
+  async function handleDelete(payrollId: string) {
+    if (!window.confirm("Delete this payroll record?")) return;
+    await deletePayroll({
+      variables: { request: { requestParam: { payrollId } } },
+    }).catch(() => {
+      setLocalData((prev) => prev.filter((p) => p.payrollId !== payrollId));
+    });
+    await refetch().catch(() => {});
+  }
+
+  function handleExportCSV() {
+    if (!payrollData || payrollData.length === 0) return;
+    const headers = Object.keys(payrollData[0]).filter(k => k !== '__typename');
+    const csvRows = [headers.join(',')];
+    for (const row of payrollData) {
+      const values = headers.map(header => {
+        const val = row[header as keyof Payroll];
+        const strVal = String(val ?? "").replace(/"/g, '""');
+        return `"${strVal}"`;
+      });
+      csvRows.push(values.join(','));
+    }
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'payroll.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  // Generate unique months for the filter dropdown
+  const uniqueMonths = Array.from(new Set(payrollData.map((p) => p.month))).sort((a, b) => b.localeCompare(a));
+  const monthOptions = uniqueMonths.map((m) => ({ label: m, value: m }));
+
+  // ── Table columns ─────────────────────────────────────────────────────────────
+
+  const columns: ColumnDef<Payroll, unknown>[] = [
+    { accessorKey: "employeeId", header: "Emp ID" },
+    { accessorKey: "month",      header: "Month" },
+    { 
+      accessorKey: "basicSalary",  
+      header: "Basic",
+      cell: ({ getValue }) => `$${Number(getValue()).toFixed(2)}`
+    },
+    { 
+      accessorKey: "bonus", 
+      header: "Bonus",
+      cell: ({ getValue }) => `$${Number(getValue()).toFixed(2)}`
+    },
+    { 
+      accessorKey: "deductions", 
+      header: "Deductions",
+      cell: ({ getValue }) => `$${Number(getValue()).toFixed(2)}`
+    },
+    { 
+      accessorKey: "netSalary", 
+      header: "Net Salary",
+      cell: ({ getValue }) => <strong className="font-semibold text-foreground">${Number(getValue()).toFixed(2)}</strong>
+    },
+    {
+      accessorKey: "paymentStatus",
+      header: "Status",
+      cell: ({ getValue }) => <StatusBadge status={String(getValue())} />,
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => openEdit(row.original)}
+            className="rounded border border-border px-2 py-1 text-xs hover:bg-muted/40"
+          >
+            Edit
+          </button>
+          <button
+            onClick={() => handleDelete(row.original.payrollId)}
+            className="rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+          >
+            Delete
+          </button>
+        </div>
+      ),
+    },
+  ];
+
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  return (
+    <div className="min-h-screen bg-background p-8">
+      {/* Page header */}
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-semibold text-foreground">Payroll Management</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={handleExportCSV}
+            className="rounded border border-border bg-background px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+          >
+            Export CSV
+          </button>
+          <button
+            onClick={openAdd}
+            className="rounded bg-foreground px-4 py-2 text-sm text-background hover:opacity-90"
+          >
+            + Add Payroll
+          </button>
+        </div>
+      </div>
+
+      <DataTable
+        data={payrollData}
+        columns={columns}
+        filters={[{ type: "search", placeholder: "Search payroll records…" }]}
+        quickFiltersTopBar={[
+          {
+            type: "select",
+            columnId: "paymentStatus",
+            label: "Payment Status",
+            options: [
+              { label: "Pending", value: "Pending" },
+              { label: "Paid",    value: "Paid"    },
+              { label: "Failed",  value: "Failed"  },
+            ],
+          },
+          {
+            type: "select",
+            columnId: "month",
+            label: "Month",
+            options: monthOptions,
+          }
+        ]}
+        initialPageSize={10}
+      />
+
+      <PayrollDrawer
+        open={drawerOpen}
+        mode={drawerMode}
+        form={form}
+        onClose={closeDrawer}
+        onChange={handleFieldChange}
+        onSave={handleSave}
+        saving={saving}
+      />
+    </div>
+  );
+}

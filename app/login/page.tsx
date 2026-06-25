@@ -50,6 +50,16 @@ export default function LoginPage() {
           </div>
         )}
 
+        <div className="mb-6 rounded-lg bg-blue-50 p-4 border border-blue-100 dark:bg-blue-950/30 dark:border-blue-900/50">
+          <p className="text-xs font-semibold text-blue-800 dark:text-blue-300 mb-2">Demo Credentials Quick Login:</p>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => { setEmail("admin@hrms.com"); setPassword("admin123"); setRole("Admin"); }} className="text-xs bg-white dark:bg-black border border-blue-200 dark:border-blue-800 rounded px-2 py-1 hover:bg-blue-100 transition-colors">Admin</button>
+            <button type="button" onClick={() => { setEmail("hr@hrms.com"); setPassword("hr123"); setRole("HR Manager"); }} className="text-xs bg-white dark:bg-black border border-blue-200 dark:border-blue-800 rounded px-2 py-1 hover:bg-blue-100 transition-colors">HR</button>
+            <button type="button" onClick={() => { setEmail("manager@hrms.com"); setPassword("manager123"); setRole("Manager"); }} className="text-xs bg-white dark:bg-black border border-blue-200 dark:border-blue-800 rounded px-2 py-1 hover:bg-blue-100 transition-colors">Manager</button>
+            <button type="button" onClick={() => { setEmail("employee@hrms.com"); setPassword("employee123"); setRole("Employee"); }} className="text-xs bg-white dark:bg-black border border-blue-200 dark:border-blue-800 rounded px-2 py-1 hover:bg-blue-100 transition-colors">Employee</button>
+          </div>
+        </div>
+
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-foreground">Email</label>

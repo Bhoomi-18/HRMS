@@ -43,7 +43,7 @@ export function CopilotWidget() {
   }
 
   return (
-    <div className="fixed bottom-20 right-4 z-40">
+    <div className="fixed bottom-20 lg:bottom-6 right-4 lg:right-6 z-40">
       {isOpen && (
         <div className="absolute bottom-16 right-0 w-80 h-96 bg-card border border-border shadow-2xl rounded-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
           <div className="bg-blue-600 text-white p-3 font-semibold flex justify-between items-center">

@@ -543,31 +543,95 @@ export default function PayrollPage() {
 
         {canManagePayroll && <ComplianceDashboard />}
 
-        <DataTable
-          data={payrollData}
-          columns={columns}
-          isLoading={loading}
-          filters={[{ type: "search", placeholder: "Search payroll records…" }]}
-          quickFiltersTopBar={[
-            {
-              type: "select",
-              columnId: "paymentStatus",
-              label: "Payment Status",
-              options: [
-                { label: "Pending", value: "Pending" },
-                { label: "Paid",    value: "Paid"    },
-                { label: "Failed",  value: "Failed"  },
-              ],
-            },
-            {
-              type: "select",
-              columnId: "month",
-              label: "Month",
-              options: monthOptions,
-            }
-          ]}
-          initialPageSize={10}
-        />
+        <div className="hidden md:block">
+          <DataTable
+            data={payrollData}
+            columns={columns}
+            isLoading={loading}
+            filters={[{ type: "search", placeholder: "Search payroll records…" }]}
+            quickFiltersTopBar={[
+              {
+                type: "select",
+                columnId: "paymentStatus",
+                label: "Payment Status",
+                options: [
+                  { label: "Pending", value: "Pending" },
+                  { label: "Paid",    value: "Paid"    },
+                  { label: "Failed",  value: "Failed"  },
+                ],
+              },
+              {
+                type: "select",
+                columnId: "month",
+                label: "Month",
+                options: monthOptions,
+              }
+            ]}
+            initialPageSize={10}
+          />
+        </div>
+
+        {/* Mobile View: Stacked Cards */}
+        <div className="md:hidden flex flex-col gap-4 mt-4">
+          {loading ? (
+            <div className="p-4 text-center text-sm text-muted-foreground">Loading...</div>
+          ) : payrollData.map((record) => (
+            <div key={record.payrollId} className="bg-card border border-border rounded-xl p-4 shadow-sm flex flex-col gap-3">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-semibold text-foreground text-lg">{record.month}</h3>
+                  <p className="text-sm text-muted-foreground">Emp ID: {record.employeeId}</p>
+                </div>
+                <StatusBadge status={record.paymentStatus} />
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-sm bg-muted/50 p-2 rounded-lg">
+                <div>
+                  <p className="text-xs text-muted-foreground">Basic</p>
+                  <p className="font-medium text-foreground">${record.basicSalary.toFixed(2)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Bonus</p>
+                  <p className="font-medium text-foreground">${record.bonus.toFixed(2)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground text-red-500">Deductions</p>
+                  <p className="font-medium text-foreground text-red-500">-${record.deductions.toFixed(2)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground text-green-600">Net Salary</p>
+                  <p className="font-bold text-foreground text-green-600">${record.netSalary.toFixed(2)}</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 mt-2 pt-3 border-t border-border">
+                <button
+                  onClick={() => {
+                    setSelectedPayslip(record);
+                    setPayslipModalOpen(true);
+                  }}
+                  className="flex-1 text-center rounded bg-foreground px-3 py-2 text-sm text-background hover:opacity-90 font-medium"
+                >
+                  View Payslip
+                </button>
+                {canManagePayroll && (
+                  <>
+                    <button
+                      onClick={() => openEdit(record)}
+                      className="flex-1 rounded border border-border px-3 py-2 text-sm hover:bg-muted/40"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(record.payrollId)}
+                      className="flex-none rounded border border-red-300 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                    >
+                      Delete
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
 
         <PayrollDrawer
           open={drawerOpen}

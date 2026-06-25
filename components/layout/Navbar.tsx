@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/AuthContext";
+import { ThemeToggle } from "../ui/ThemeToggle";
 
 // ─── Mock Search Data ────────────────────────────────────────────────────────
 const SEARCH_DATA = [
@@ -33,27 +34,6 @@ export function Navbar() {
   const searchRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
-
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-
-  useEffect(() => {
-    const storedTheme = localStorage.getItem("theme");
-    if (storedTheme === "dark" || (!storedTheme && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
-      setTheme("dark");
-      document.documentElement.classList.add("dark");
-    } else {
-      setTheme("light");
-      document.documentElement.classList.remove("dark");
-    }
-  }, []);
-
-  const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-    setTheme(newTheme);
-    localStorage.setItem("theme", newTheme);
-    if (newTheme === "dark") document.documentElement.classList.add("dark");
-    else document.documentElement.classList.remove("dark");
-  };
 
   const unreadCount = NOTIFICATIONS.filter(n => n.unread).length;
 
@@ -129,12 +109,7 @@ export function Navbar() {
       <div className="flex items-center gap-4">
         
         {/* Dark Mode Toggle */}
-        <button 
-          onClick={toggleTheme}
-          className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-        >
-          <span className="text-xl">{theme === "light" ? "🌙" : "☀️"}</span>
-        </button>
+        <ThemeToggle />
 
         {/* Notification Bell */}
         <div className="relative" ref={notifRef}>

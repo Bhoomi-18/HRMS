@@ -593,25 +593,74 @@ export default function AttendancePage() {
         )}
 
         {activeTab === "log" ? (
-          <DataTable
-            data={attendanceData}
-            columns={columns}
-            isLoading={loading}
-            filters={[{ type: "search", placeholder: "Search records…" }]}
-            quickFiltersTopBar={[
-              {
-                type: "select",
-                columnId: "status",
-                label: "Status",
-                options: [
-                  { label: "Present", value: "Present" },
-                  { label: "Absent",  value: "Absent"  },
-                  { label: "Late",    value: "Late"    },
-                ],
-              }
-            ]}
-            initialPageSize={10}
-          />
+          <>
+            <div className="hidden md:block">
+              <DataTable
+                data={attendanceData}
+                columns={columns}
+                isLoading={loading}
+                filters={[{ type: "search", placeholder: "Search records…" }]}
+                quickFiltersTopBar={[
+                  {
+                    type: "select",
+                    columnId: "status",
+                    label: "Status",
+                    options: [
+                      { label: "Present", value: "Present" },
+                      { label: "Absent",  value: "Absent"  },
+                      { label: "Late",    value: "Late"    },
+                    ],
+                  }
+                ]}
+                initialPageSize={10}
+              />
+            </div>
+            
+            {/* Mobile View: Stacked Cards */}
+            <div className="md:hidden flex flex-col gap-4">
+              {loading ? (
+                <div className="p-4 text-center text-sm text-muted-foreground">Loading...</div>
+              ) : attendanceData.map((record) => (
+                <div key={record.attendanceId} className="bg-card border border-border rounded-xl p-4 shadow-sm flex flex-col gap-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-semibold text-foreground">{record.date}</h3>
+                      <p className="text-xs text-muted-foreground">Emp ID: {record.employeeId}</p>
+                    </div>
+                    <StatusBadge status={record.status} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm bg-muted/50 p-2 rounded-lg">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Check-In</p>
+                      <p className="font-medium text-foreground">{record.checkInTime ? new Date(record.checkInTime).toLocaleTimeString() : "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Check-Out</p>
+                      <p className="font-medium text-foreground">{record.checkOutTime ? new Date(record.checkOutTime).toLocaleTimeString() : "-"}</p>
+                    </div>
+                  </div>
+                  {(canEditAttendance || isEmployee) && (
+                    <div className="flex justify-end gap-3 mt-2">
+                      <button
+                        onClick={() => openEdit(record)}
+                        className="text-sm font-medium text-foreground hover:underline"
+                      >
+                        Edit
+                      </button>
+                      {canEditAttendance && (
+                        <button
+                          onClick={() => handleDelete(record.attendanceId)}
+                          className="text-sm font-medium text-red-600 hover:underline"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
         ) : (
           <ShiftCalendar />
         )}

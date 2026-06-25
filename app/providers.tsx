@@ -7,11 +7,17 @@ import { store } from "../store";
 import { apolloClient } from "../lib/apolloClient";
 import { SessionProvider } from "../context/SessionContext";
 
+import { ThemeProvider } from "next-themes";
+
 export function Providers({ children }: PropsWithChildren) {
 	return (
 		<ReduxProvider store={store}>
 			<ApolloProvider client={apolloClient}>
-				<SessionProvider>{children}</SessionProvider>
+				<SessionProvider>
+					<ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+						{children}
+					</ThemeProvider>
+				</SessionProvider>
 			</ApolloProvider>
 		</ReduxProvider>
 	);

@@ -93,11 +93,11 @@ export default function OnboardingPage() {
                   <label key={task.id} className="flex items-start gap-3 p-3 rounded-lg border border-border hover:bg-muted/30 cursor-pointer transition-colors">
                     <input 
                       type="checkbox" 
-                      className="mt-1 h-4 w-4 rounded border-gray-300 text-foreground focus:ring-foreground"
+                      className="mt-1 h-5 w-5 shrink-0 rounded border-gray-300 text-foreground focus:ring-foreground"
                       checked={task.completed}
                       onChange={() => toggleTask(task.id)}
                     />
-                    <span className={`text-sm ${task.completed ? 'text-muted-foreground line-through' : 'text-foreground font-medium'}`}>
+                    <span className={`text-sm sm:text-base pt-0.5 leading-snug ${task.completed ? 'text-muted-foreground line-through' : 'text-foreground font-medium'}`}>
                       {task.title}
                     </span>
                   </label>

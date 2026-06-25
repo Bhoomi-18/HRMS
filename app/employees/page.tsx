@@ -370,34 +370,71 @@ export default function EmployeesPage() {
           </div>
         </div>
 
-        <DataTable
-          data={employees}
-          columns={columns}
-          isLoading={loading}
-          filters={[{ type: "search", placeholder: "Search employees…" }]}
-          quickFiltersTopBar={[
-            {
-              type: "select",
-              columnId: "status",
-              label: "Status",
-              options: [
-                { label: "Active",   value: "Active"   },
-                { label: "On Leave", value: "OnLeave"  },
-                { label: "Inactive", value: "Inactive" },
-              ],
-            },
-            {
-              type: "select",
-              columnId: "department",
-              label: "Department",
-              options: Array.from(new Set(employees.map((e) => e.department))).map((d) => ({
-                label: d,
-                value: d,
-              })),
-            },
-          ]}
-          initialPageSize={10}
-        />
+        <div className="hidden md:block">
+          <DataTable
+            data={employees}
+            columns={columns}
+            isLoading={loading}
+            filters={[{ type: "search", placeholder: "Search employees…" }]}
+            quickFiltersTopBar={[
+              {
+                type: "select",
+                columnId: "status",
+                label: "Status",
+                options: [
+                  { label: "Active",   value: "Active"   },
+                  { label: "On Leave", value: "OnLeave"  },
+                  { label: "Inactive", value: "Inactive" },
+                ],
+              },
+              {
+                type: "select",
+                columnId: "department",
+                label: "Department",
+                options: Array.from(new Set(employees.map((e) => e.department))).map((d) => ({
+                  label: d,
+                  value: d,
+                })),
+              },
+            ]}
+            initialPageSize={10}
+          />
+        </div>
+
+        {/* Mobile View: Stacked Cards */}
+        <div className="md:hidden flex flex-col gap-4 mt-4">
+          {loading ? (
+            <div className="p-4 text-center text-sm text-muted-foreground">Loading...</div>
+          ) : employees.map((emp) => (
+            <div key={emp.employeeId} className="bg-card border border-border rounded-xl p-4 shadow-sm flex flex-col gap-3">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-semibold text-foreground text-lg">{emp.firstName} {emp.lastName}</h3>
+                  <p className="text-sm text-muted-foreground">{emp.designation} • {emp.department}</p>
+                </div>
+                <StatusBadge status={emp.status} />
+              </div>
+              <div className="text-sm text-muted-foreground">
+                <p>Code: <span className="text-foreground">{emp.employeeCode}</span></p>
+                <p>Email: <span className="text-foreground">{emp.email}</span></p>
+              </div>
+              <div className="flex items-center gap-2 mt-2 pt-3 border-t border-border">
+                <Link
+                  href={`/employees/${emp.employeeId}`}
+                  className="flex-1 text-center rounded bg-foreground px-3 py-2 text-sm text-background hover:opacity-90 font-medium"
+                >
+                  View Profile
+                </Link>
+                <button
+                  onClick={() => openEdit(emp)}
+                  className="flex-1 rounded border border-border px-3 py-2 text-sm hover:bg-muted/40"
+                >
+                  Edit
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
 
         <EmployeeDrawer
           open={drawerOpen}

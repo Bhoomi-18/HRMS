@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { Sidebar } from "./Sidebar";
 import { Breadcrumb } from "./Breadcrumb";
 import { Navbar } from "./Navbar";
+import { BottomNav } from "./BottomNav";
 import { AuthProvider } from "../../context/AuthContext";
 import { RoleSwitcher } from "../ui/RoleSwitcher";
 import { CopilotWidget } from "../ui/CopilotWidget";
@@ -24,9 +25,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthProvider>
-      <div className="flex h-[100dvh] flex-col overflow-hidden bg-background">
+      <div className="flex h-[100dvh] flex-col lg:flex-row overflow-hidden bg-background relative">
         <Sidebar />
-        <main className="flex-1 flex flex-col overflow-hidden w-full relative">
+        <main className="flex-1 flex flex-col overflow-hidden w-full relative pb-16 lg:pb-0">
           <Navbar />
           <div className="flex-1 overflow-y-auto flex flex-col">
             <Breadcrumb />
@@ -40,6 +41,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
             </footer>
           </div>
         </main>
+        <BottomNav />
         <RoleSwitcher />
         <CopilotWidget />
       </div>

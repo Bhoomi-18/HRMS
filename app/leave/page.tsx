@@ -68,6 +68,31 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+// ─── Leave Balance Widget ─────────────────────────────────────────────────────
+
+function LeaveBalanceWidget() {
+  return (
+    <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+        <p className="text-sm font-medium text-muted-foreground mb-1">Total Allowed</p>
+        <p className="text-2xl font-bold text-foreground">24</p>
+      </div>
+      <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+        <p className="text-sm font-medium text-muted-foreground mb-1">Used</p>
+        <p className="text-2xl font-bold text-foreground">8</p>
+      </div>
+      <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+        <p className="text-sm font-medium text-muted-foreground mb-1">Pending</p>
+        <p className="text-2xl font-bold text-yellow-600">2</p>
+      </div>
+      <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+        <p className="text-sm font-medium text-muted-foreground mb-1">Available</p>
+        <p className="text-2xl font-bold text-green-600">14</p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Leave Drawer (right-side form panel) ──────────────────────────────────
 
 function LeaveDrawer({
@@ -210,9 +235,10 @@ export default function LeavePage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "Admin";
   const isHR = user?.role === "HR Manager";
+  const isManager = user?.role === "Manager";
   const isEmployee = user?.role === "Employee";
   const isFinance = user?.role === "Finance";
-  const canEditLeave = isAdmin || isHR;
+  const canEditLeave = isAdmin || isHR || isManager;
 
   // ── GraphQL hooks ────────────────────────────────────────────────────────────
   const { data, loading, refetch } = useQuery<GetAllLeaveResult>(GET_ALL_LEAVE, {
@@ -315,6 +341,28 @@ export default function LeavePage() {
     await refetch().catch(() => {});
   }
 
+  async function handleApproveReject(leaveId: string, newStatus: string) {
+    if (!canEditLeave) return;
+    const comment = window.prompt(`Enter comment for ${newStatus} (optional):`, "");
+    if (comment === null) return; // User cancelled
+    
+    // In a real app we'd save the comment. For mock, we'll append it to reason or just update status.
+    const record = localData.find(l => l.leaveId === leaveId);
+    if (!record) return;
+
+    const updatedReason = comment ? `${record.reason} | Note: ${comment}` : record.reason;
+
+    await updateLeave({
+      variables: { request: { requestParam: { ...record, status: newStatus, reason: updatedReason } } },
+    }).then(() => toast.success(`Leave ${newStatus} successfully.`)).catch(() => {
+      toast.error("Network error. Using mock data.");
+      setLocalData((prev) =>
+        prev.map((l) => (l.leaveId === leaveId ? { ...l, status: newStatus, reason: updatedReason } : l))
+      );
+    });
+    await refetch().catch(() => {});
+  }
+
   function handleExportCSV() {
     if (!leaveData || leaveData.length === 0) return;
     const headers = Object.keys(leaveData[0]).filter(k => k !== '__typename');
@@ -375,12 +423,30 @@ export default function LeavePage() {
         }
         return (
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => openEdit(record)}
-              className="text-sm font-medium text-foreground hover:underline"
-            >
-              Edit
-            </button>
+            {canEditLeave && record.status === "Pending" ? (
+              <>
+                <button
+                  onClick={() => handleApproveReject(record.leaveId, "Approved")}
+                  className="text-sm font-medium text-green-600 hover:underline"
+                >
+                  Approve
+                </button>
+                <button
+                  onClick={() => handleApproveReject(record.leaveId, "Rejected")}
+                  className="text-sm font-medium text-red-600 hover:underline"
+                >
+                  Reject
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => openEdit(record)}
+                className="text-sm font-medium text-foreground hover:underline"
+              >
+                {canEditLeave ? "Edit" : "View"}
+              </button>
+            )}
+            
             {(canEditLeave || (isEmployee && record.status !== "Approved")) && (
               <button
                 onClick={() => handleDelete(record.leaveId, record.status)}
@@ -420,6 +486,9 @@ export default function LeavePage() {
             )}
           </div>
         </div>
+
+        {/* Leave Balance Widget (Visible mostly for employees) */}
+        {isEmployee && <LeaveBalanceWidget />}
 
         <DataTable
           data={leaveData}

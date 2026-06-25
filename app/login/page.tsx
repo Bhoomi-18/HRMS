@@ -21,6 +21,7 @@ export default function LoginPage() {
     const mockAccounts = [
       { email: "admin@hrms.com", password: "admin123", role: "Admin" as UserRole, id: "ADMIN_1", name: "System Admin" },
       { email: "hr@hrms.com", password: "hr123", role: "HR Manager" as UserRole, id: "HR_1", name: "HR Manager" },
+      { email: "manager@hrms.com", password: "manager123", role: "Manager" as UserRole, id: "MGR_1", name: "Engineering Manager" },
       { email: "employee@hrms.com", password: "employee123", role: "Employee" as UserRole, id: "EMP001", name: "John Doe" },
       { email: "finance@hrms.com", password: "finance123", role: "Finance" as UserRole, id: "FIN_1", name: "Finance User" },
     ];
@@ -83,6 +84,7 @@ export default function LoginPage() {
             >
               <option value="Admin">Admin</option>
               <option value="HR Manager">HR Manager</option>
+              <option value="Manager">Manager</option>
               <option value="Employee">Employee</option>
               <option value="Finance">Finance</option>
             </select>
@@ -115,6 +117,7 @@ export default function LoginPage() {
             <div>
               <p><strong>Admin:</strong> admin@hrms.com</p>
               <p><strong>HR:</strong> hr@hrms.com</p>
+              <p><strong>Manager:</strong> manager@hrms.com</p>
             </div>
             <div>
               <p><strong>Employee:</strong> employee@hrms.com</p>

@@ -21,6 +21,11 @@ export function Sidebar() {
     { name: "Leave", href: "/leave", icon: "🌴", roles: PAGE_PERMISSIONS.leave },
     { name: "Payroll", href: "/payroll", icon: "💰", roles: PAGE_PERMISSIONS.payroll },
     { name: "Announcements", href: "/announcements", icon: "📢", roles: PAGE_PERMISSIONS.announcements },
+    { name: "Expenses", href: "/expenses", icon: "💳", roles: PAGE_PERMISSIONS.expenses },
+    { name: "Documents", href: "/documents", icon: "📄", roles: PAGE_PERMISSIONS.documents },
+    { name: "Recruitment", href: "/recruitment", icon: "🎯", roles: PAGE_PERMISSIONS.recruitment },
+    { name: "Onboarding", href: "/onboarding", icon: "🚀", roles: PAGE_PERMISSIONS.onboarding },
+    { name: "Training", href: "/training", icon: "🎓", roles: PAGE_PERMISSIONS.training },
   ];
 
   const links = allLinks.filter(link => {

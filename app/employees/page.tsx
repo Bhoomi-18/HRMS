@@ -8,6 +8,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "../../components/table/DataTable";
 import { ProtectedRoute } from "../../components/auth/ProtectedRoute";
 import { PAGE_PERMISSIONS } from "../../config/rbac";
+import { useAuth } from "../../context/AuthContext";
 import { GET_ALL_EMPLOYEES } from "../../graphql/query/employees";
 import { CREATE_EMPLOYEE } from "../../graphql/mutation/createEmployee";
 import { UPDATE_EMPLOYEE } from "../../graphql/mutation/updateEmployee";
@@ -28,6 +29,7 @@ type Employee = {
   employmentType: string;
   salary: number;
   status: string;
+  managerId?: string;
 };
 
 // Describes the shape Apollo returns for the getAllEmployees query
@@ -42,14 +44,14 @@ type GetAllEmployeesResult = {
 // ─── Mock Data (fallback when GraphQL is not connected) ───────────────────────
 
 const MOCK_EMPLOYEES: Employee[] = [
-  { employeeId: "1", employeeCode: "EMP001", firstName: "Priya",   lastName: "Sharma",  email: "priya@hrms.com",   phone: "9876543210", department: "Engineering", designation: "SDE II",        joiningDate: "2022-03-15", employmentType: "Full-Time", salary: 85000,  status: "Active"   },
-  { employeeId: "2", employeeCode: "EMP002", firstName: "Rahul",   lastName: "Verma",   email: "rahul@hrms.com",   phone: "9876543211", department: "HR",          designation: "HR Manager",     joiningDate: "2021-07-01", employmentType: "Full-Time", salary: 65000,  status: "Active"   },
-  { employeeId: "3", employeeCode: "EMP003", firstName: "Anita",   lastName: "Patel",   email: "anita@hrms.com",   phone: "9876543212", department: "Finance",     designation: "Accountant",     joiningDate: "2020-11-20", employmentType: "Full-Time", salary: 72000,  status: "OnLeave"  },
-  { employeeId: "4", employeeCode: "EMP004", firstName: "Suresh",  lastName: "Kumar",   email: "suresh@hrms.com",  phone: "9876543213", department: "Engineering", designation: "SDE III",        joiningDate: "2019-05-10", employmentType: "Full-Time", salary: 90000,  status: "Active"   },
-  { employeeId: "5", employeeCode: "EMP005", firstName: "Meera",   lastName: "Joshi",   email: "meera@hrms.com",   phone: "9876543214", department: "Marketing",   designation: "Growth Lead",    joiningDate: "2023-01-22", employmentType: "Contract",  salary: 68000,  status: "Active"   },
-  { employeeId: "6", employeeCode: "EMP006", firstName: "Vikram",  lastName: "Singh",   email: "vikram@hrms.com",  phone: "9876543215", department: "Engineering", designation: "Tech Lead",      joiningDate: "2018-09-30", employmentType: "Full-Time", salary: 105000, status: "Inactive" },
-  { employeeId: "7", employeeCode: "EMP007", firstName: "Kavitha", lastName: "Nair",    email: "kavitha@hrms.com", phone: "9876543216", department: "HR",          designation: "HR Analyst",     joiningDate: "2022-08-14", employmentType: "Full-Time", salary: 62000,  status: "Active"   },
-  { employeeId: "8", employeeCode: "EMP008", firstName: "Amit",    lastName: "Gupta",   email: "amit@hrms.com",    phone: "9876543217", department: "Finance",     designation: "Finance Manager", joiningDate: "2021-03-05", employmentType: "Full-Time", salary: 78000,  status: "OnLeave"  },
+  { employeeId: "1", employeeCode: "EMP001", firstName: "Priya",   lastName: "Sharma",  email: "priya@hrms.com",   phone: "9876543210", department: "Engineering", designation: "SDE II",        joiningDate: "2022-03-15", employmentType: "Full-Time", salary: 85000,  status: "Active", managerId: "MGR_1" },
+  { employeeId: "2", employeeCode: "EMP002", firstName: "Rahul",   lastName: "Verma",   email: "rahul@hrms.com",   phone: "9876543211", department: "HR",          designation: "HR Manager",     joiningDate: "2021-07-01", employmentType: "Full-Time", salary: 65000,  status: "Active", managerId: "ADMIN_1" },
+  { employeeId: "3", employeeCode: "EMP003", firstName: "Anita",   lastName: "Patel",   email: "anita@hrms.com",   phone: "9876543212", department: "Finance",     designation: "Accountant",     joiningDate: "2020-11-20", employmentType: "Full-Time", salary: 72000,  status: "OnLeave", managerId: "FIN_1" },
+  { employeeId: "4", employeeCode: "EMP004", firstName: "Suresh",  lastName: "Kumar",   email: "suresh@hrms.com",  phone: "9876543213", department: "Engineering", designation: "SDE III",        joiningDate: "2019-05-10", employmentType: "Full-Time", salary: 90000,  status: "Active", managerId: "MGR_1" },
+  { employeeId: "5", employeeCode: "EMP005", firstName: "Meera",   lastName: "Joshi",   email: "meera@hrms.com",   phone: "9876543214", department: "Marketing",   designation: "Growth Lead",    joiningDate: "2023-01-22", employmentType: "Contract",  salary: 68000,  status: "Active", managerId: "ADMIN_1" },
+  { employeeId: "6", employeeCode: "EMP006", firstName: "Vikram",  lastName: "Singh",   email: "vikram@hrms.com",  phone: "9876543215", department: "Engineering", designation: "Tech Lead",      joiningDate: "2018-09-30", employmentType: "Full-Time", salary: 105000, status: "Inactive", managerId: "MGR_1" },
+  { employeeId: "7", employeeCode: "EMP007", firstName: "Kavitha", lastName: "Nair",    email: "kavitha@hrms.com", phone: "9876543216", department: "HR",          designation: "HR Analyst",     joiningDate: "2022-08-14", employmentType: "Full-Time", salary: 62000,  status: "Active", managerId: "HR_1" },
+  { employeeId: "8", employeeCode: "EMP008", firstName: "Amit",    lastName: "Gupta",   email: "amit@hrms.com",    phone: "9876543217", department: "Finance",     designation: "Finance Manager", joiningDate: "2021-03-05", employmentType: "Full-Time", salary: 78000,  status: "OnLeave", managerId: "FIN_1" },
 ];
 
 // ─── Empty form state ─────────────────────────────────────────────────────────
@@ -57,7 +59,7 @@ const MOCK_EMPLOYEES: Employee[] = [
 const EMPTY_FORM: Omit<Employee, "employeeId"> = {
   employeeCode: "", firstName: "", lastName: "", email: "",
   phone: "", department: "", designation: "", joiningDate: "",
-  employmentType: "Full-Time", salary: 0, status: "Active",
+  employmentType: "Full-Time", salary: 0, status: "Active", managerId: ""
 };
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
@@ -98,6 +100,7 @@ function EmployeeDrawer({
     { key: "designation",   label: "Designation" },
     { key: "joiningDate",   label: "Joining Date", type: "date" },
     { key: "salary",        label: "Salary",       type: "number" },
+    { key: "managerId",     label: "Manager ID" },
   ];
 
   return (
@@ -189,6 +192,9 @@ export default function EmployeesPage() {
   const [saving,     setSaving]       = useState(false);
   const [localData,  setLocalData]    = useState<Employee[]>(MOCK_EMPLOYEES);
 
+  const { user } = useAuth();
+  const isManager = user?.role === "Manager";
+
   // ── GraphQL hooks ────────────────────────────────────────────────────────────
   const { data, loading, refetch } = useQuery<GetAllEmployeesResult>(GET_ALL_EMPLOYEES, {
     variables: { request: { pageCriteria: { enablePage: false, pageSize: 1000, skip: 0 } } },
@@ -199,7 +205,8 @@ export default function EmployeesPage() {
   const [deleteEmployee] = useMutation(DELETE_EMPLOYEE);
 
   // Use live data if available, otherwise use local state (mock or optimistic)
-  const employees: Employee[] = data?.getAllEmployees?.data?.employees ?? localData;
+  const rawData: Employee[] = data?.getAllEmployees?.data?.employees ?? localData;
+  const employees = isManager ? rawData.filter(e => e.managerId === user?.id) : rawData;
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
@@ -301,9 +308,9 @@ export default function EmployeesPage() {
       accessorFn: (row) => `${row.firstName} ${row.lastName}`,
     },
     { accessorKey: "email",          header: "Email" },
+    { accessorKey: "designation",    header: "Role" },
     { accessorKey: "department",     header: "Department" },
-    { accessorKey: "designation",    header: "Designation" },
-    { accessorKey: "employmentType", header: "Type" },
+    { accessorKey: "managerId",      header: "Reporting To" },
     {
       accessorKey: "status",
       header: "Status",
@@ -344,7 +351,9 @@ export default function EmployeesPage() {
       <div className="min-h-screen bg-background p-8">
         {/* Page header */}
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-2xl font-semibold text-foreground">Employees</h1>
+          <h1 className="text-2xl font-semibold text-foreground">
+            {isManager ? "My Team" : "Team Management"}
+          </h1>
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={handleExportCSV}

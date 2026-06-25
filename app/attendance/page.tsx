@@ -23,6 +23,7 @@ type Attendance = {
   checkInTime: string;
   checkOutTime: string;
   notes: string;
+  overtimeHours?: number;
 };
 
 type GetAllAttendanceResult = {
@@ -36,10 +37,10 @@ type GetAllAttendanceResult = {
 // ─── Mock Data (fallback when GraphQL is not connected) ───────────────────────
 
 const MOCK_ATTENDANCE: Attendance[] = [
-  { attendanceId: "1", employeeId: "EMP001", date: "2026-06-23", status: "Present", checkInTime: "2026-06-23T09:00:00", checkOutTime: "2026-06-23T18:00:00", notes: "" },
-  { attendanceId: "2", employeeId: "EMP002", date: "2026-06-23", status: "Late",    checkInTime: "2026-06-23T10:15:00", checkOutTime: "2026-06-23T18:30:00", notes: "Traffic" },
+  { attendanceId: "1", employeeId: "EMP001", date: "2026-06-23", status: "Present", checkInTime: "2026-06-23T09:00:00", checkOutTime: "2026-06-23T18:00:00", notes: "", overtimeHours: 0 },
+  { attendanceId: "2", employeeId: "EMP002", date: "2026-06-23", status: "Late",    checkInTime: "2026-06-23T10:15:00", checkOutTime: "2026-06-23T18:30:00", notes: "Traffic", overtimeHours: 0 },
   { attendanceId: "3", employeeId: "EMP003", date: "2026-06-23", status: "Absent",  checkInTime: "",                    checkOutTime: "",                    notes: "Sick leave" },
-  { attendanceId: "4", employeeId: "EMP004", date: "2026-06-23", status: "Present", checkInTime: "2026-06-23T08:50:00", checkOutTime: "2026-06-23T17:45:00", notes: "" },
+  { attendanceId: "4", employeeId: "EMP004", date: "2026-06-23", status: "Present", checkInTime: "2026-06-23T08:50:00", checkOutTime: "2026-06-23T19:45:00", notes: "", overtimeHours: 1.5 },
 ];
 
 // ─── Empty form state ─────────────────────────────────────────────────────────
@@ -65,6 +66,84 @@ function StatusBadge({ status }: { status: string }) {
     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${colors[status] ?? "bg-muted text-muted-foreground"}`}>
       {status}
     </span>
+  );
+}
+
+// ─── Shift Calendar View ──────────────────────────────────────────────────────
+
+function ShiftCalendar() {
+  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  return (
+    <div className="mt-6 rounded-xl border border-border bg-card p-6 shadow-sm">
+       <h3 className="text-lg font-semibold mb-4 text-foreground">My Shift Schedule (Current Week)</h3>
+       <div className="grid grid-cols-1 sm:grid-cols-7 gap-4">
+         {days.map(day => (
+           <div key={day} className="border border-border rounded-lg p-3 text-center">
+             <div className="font-medium text-sm mb-2 text-foreground">{day}</div>
+             {day === "Saturday" || day === "Sunday" ? (
+               <div className="text-xs text-muted-foreground font-medium bg-muted py-2 rounded">Off</div>
+             ) : (
+               <div className="text-xs text-blue-700 bg-blue-100 py-2 rounded font-medium">09:00 AM<br/>to<br/>06:00 PM</div>
+             )}
+           </div>
+         ))}
+       </div>
+    </div>
+  );
+}
+
+// ─── Clock In / Out Modal ─────────────────────────────────────────────────────
+
+import { useEffect } from "react";
+
+function ClockModal({ open, onClose, isClockingOut, onConfirm }: { open: boolean, onClose: () => void, isClockingOut: boolean, onConfirm: () => void }) {
+  const [verifying, setVerifying] = useState(true);
+  
+  useEffect(() => {
+    if(open) {
+      setVerifying(true);
+      const t = setTimeout(() => setVerifying(false), 1500);
+      return () => clearTimeout(t);
+    }
+  }, [open]);
+
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-sm rounded-xl bg-card border border-border p-6 shadow-xl">
+        <h2 className="text-xl font-bold mb-4 text-foreground">{isClockingOut ? "Clock Out Verification" : "Clock In Verification"}</h2>
+        
+        {/* Mock Camera View */}
+        <div className="h-48 bg-muted rounded-lg flex items-center justify-center mb-4 border-2 border-dashed border-border relative overflow-hidden">
+           {verifying ? (
+             <span className="animate-pulse text-muted-foreground font-medium">Accessing Camera...</span>
+           ) : (
+             <div className="absolute inset-0 bg-green-100/20 flex flex-col items-center justify-center">
+               <span className="text-5xl mb-2">👤</span>
+               <span className="text-xs font-semibold text-green-700 bg-green-100 px-2 py-1 rounded-full">Selfie Captured</span>
+             </div>
+           )}
+        </div>
+
+        <div className="space-y-3 mb-6 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Location Check</span>
+            <span className="font-medium">{verifying ? "Verifying..." : "✅ Verified (Office)"}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">IP Validation</span>
+            <span className="font-medium">{verifying ? "Validating..." : "✅ Valid (192.168.1.50)"}</span>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3">
+          <button onClick={onClose} className="rounded-md border border-border px-4 py-2 text-sm font-medium hover:bg-muted">Cancel</button>
+          <button onClick={onConfirm} disabled={verifying} className="rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50 transition-opacity">
+            {isClockingOut ? "Confirm Clock Out" : "Confirm Clock In"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -203,6 +282,8 @@ export default function AttendancePage() {
   const [form,       setForm]         = useState<Omit<Attendance, "attendanceId">>(EMPTY_FORM);
   const [saving,     setSaving]       = useState(false);
   const [localData,  setLocalData]    = useState<Attendance[]>(MOCK_ATTENDANCE);
+  const [activeTab,  setActiveTab]    = useState<"log" | "calendar">("log");
+  const [clockModalOpen, setClockModalOpen] = useState(false);
 
   const { user } = useAuth();
   const isAdmin = user?.role === "Admin";
@@ -226,6 +307,11 @@ export default function AttendancePage() {
     if (isEmployee) return item.employeeId === user?.id;
     return true;
   });
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todaysRecord = attendanceData.find(a => a.employeeId === user?.id && a.date === todayStr);
+  const isClockingOut = !!(todaysRecord && todaysRecord.checkInTime && !todaysRecord.checkOutTime);
+  const hasCompletedToday = !!(todaysRecord && todaysRecord.checkInTime && todaysRecord.checkOutTime);
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
@@ -259,11 +345,18 @@ export default function AttendancePage() {
   async function handleSave() {
     setSaving(true);
     try {
+      const calcOvertime = (checkIn: string, checkOut: string) => {
+        if (!checkIn || !checkOut) return 0;
+        const diffHours = (new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 3600000;
+        return diffHours > 8 ? parseFloat((diffHours - 8).toFixed(1)) : 0;
+      };
+      
+      const payload = { ...form, overtimeHours: calcOvertime(form.checkInTime, form.checkOutTime) };
+
       if (drawerMode === "add") {
-        const payload = isEmployee ? { ...form, employeeId: user?.id || form.employeeId } : form;
         await createAttendance({
           variables: { request: { requestParam: payload } },
-        }).then(() => toast.success("Action completed successfully.")).catch(() => {
+        }).then(() => toast.success("Attendance added successfully!")).catch(() => {
           // Optimistic local update when backend unavailable
           toast.error("Network error. Using mock data.");
           setLocalData((prev) => [
@@ -286,6 +379,32 @@ export default function AttendancePage() {
       setSaving(false);
       closeDrawer();
     }
+  }
+
+  function handleClockConfirm() {
+    const now = new Date().toISOString();
+    if (isClockingOut && todaysRecord) {
+      // Mock clock out
+      const checkIn = todaysRecord.checkInTime;
+      const diffHours = (new Date(now).getTime() - new Date(checkIn).getTime()) / 3600000;
+      const ot = diffHours > 8 ? parseFloat((diffHours - 8).toFixed(1)) : 0;
+      setLocalData(prev => prev.map(a => a.attendanceId === todaysRecord.attendanceId ? { ...a, checkOutTime: now, overtimeHours: ot } : a));
+      toast.success("Clocked out successfully!");
+    } else {
+      // Mock clock in
+      setLocalData(prev => [...prev, {
+        attendanceId: `local-${Date.now()}`,
+        employeeId: user?.id || "",
+        date: todayStr,
+        status: "Present",
+        checkInTime: now,
+        checkOutTime: "",
+        notes: "Selfie verified",
+        overtimeHours: 0
+      }]);
+      toast.success("Clocked in successfully!");
+    }
+    setClockModalOpen(false);
   }
 
   async function handleDelete(attendanceId: string) {
@@ -352,6 +471,14 @@ export default function AttendancePage() {
         return val ? new Date(val).toLocaleTimeString() : "-";
       }
     },
+    {
+      accessorKey: "overtimeHours",
+      header: "Overtime (Hrs)",
+      cell: ({ getValue }) => {
+        const val = getValue() as number;
+        return val && val > 0 ? <span className="font-medium text-orange-600">{val}h</span> : "-";
+      }
+    },
     { accessorKey: "notes",      header: "Notes" },
     {
       id: "actions",
@@ -398,33 +525,72 @@ export default function AttendancePage() {
             >
               Export CSV
             </button>
-            <button
-              onClick={openAdd}
-              className="rounded bg-foreground px-4 py-2 text-sm text-background hover:opacity-90"
-            >
-              + Mark Attendance
-            </button>
+            {isEmployee ? (
+              <button
+                onClick={() => setClockModalOpen(true)}
+                disabled={hasCompletedToday}
+                className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background hover:opacity-90 disabled:opacity-50"
+              >
+                {hasCompletedToday ? "Completed Today" : isClockingOut ? "Clock Out (Selfie)" : "Clock In (Selfie)"}
+              </button>
+            ) : (
+              <button
+                onClick={openAdd}
+                className="rounded bg-foreground px-4 py-2 text-sm text-background hover:opacity-90"
+              >
+                + Add Record
+              </button>
+            )}
           </div>
         </div>
 
-        <DataTable
-          data={attendanceData}
-          columns={columns}
-          isLoading={loading}
-          filters={[{ type: "search", placeholder: "Search records…" }]}
-          quickFiltersTopBar={[
-            {
-              type: "select",
-              columnId: "status",
-              label: "Status",
-              options: [
-                { label: "Present", value: "Present" },
-                { label: "Absent",  value: "Absent"  },
-                { label: "Late",    value: "Late"    },
-              ],
-            }
-          ]}
-          initialPageSize={10}
+        {/* Tabs for Shift Calendar */}
+        {isEmployee && (
+          <div className="mb-6 flex space-x-1 rounded-lg bg-muted p-1 max-w-fit">
+            <button
+              onClick={() => setActiveTab("log")}
+              className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${activeTab === "log" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:bg-muted/80"}`}
+            >
+              Daily Log
+            </button>
+            <button
+              onClick={() => setActiveTab("calendar")}
+              className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${activeTab === "calendar" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:bg-muted/80"}`}
+            >
+              Shift Calendar
+            </button>
+          </div>
+        )}
+
+        {activeTab === "log" ? (
+          <DataTable
+            data={attendanceData}
+            columns={columns}
+            isLoading={loading}
+            filters={[{ type: "search", placeholder: "Search records…" }]}
+            quickFiltersTopBar={[
+              {
+                type: "select",
+                columnId: "status",
+                label: "Status",
+                options: [
+                  { label: "Present", value: "Present" },
+                  { label: "Absent",  value: "Absent"  },
+                  { label: "Late",    value: "Late"    },
+                ],
+              }
+            ]}
+            initialPageSize={10}
+          />
+        ) : (
+          <ShiftCalendar />
+        )}
+
+        <ClockModal
+          open={clockModalOpen}
+          onClose={() => setClockModalOpen(false)}
+          isClockingOut={isClockingOut}
+          onConfirm={handleClockConfirm}
         />
 
         <AttendanceDrawer

@@ -21,6 +21,8 @@ export type Announcement = {
   expiryDate: string;
   views: number;
   acknowledgements: number;
+  likes: number;
+  comments: number;
 };
 
 const MOCK_ANNOUNCEMENTS: Announcement[] = [
@@ -34,6 +36,8 @@ const MOCK_ANNOUNCEMENTS: Announcement[] = [
     expiryDate: "2026-07-01",
     views: 145,
     acknowledgements: 120,
+    likes: 85,
+    comments: 12,
   },
   {
     announcementId: "A2",
@@ -45,6 +49,8 @@ const MOCK_ANNOUNCEMENTS: Announcement[] = [
     expiryDate: "2026-06-25",
     views: 89,
     acknowledgements: 50,
+    likes: 10,
+    comments: 4,
   },
 ];
 
@@ -230,18 +236,29 @@ export default function AnnouncementsPage() {
                 <div className="grid grid-cols-2 gap-y-2 text-xs text-muted-foreground mb-4">
                   <div><span className="font-medium text-foreground">Category:</span> {item.category}</div>
                   <div><span className="font-medium text-foreground">Expires:</span> {item.expiryDate}</div>
-                  <div><span className="font-medium text-foreground">Views:</span> {item.views}</div>
-                  <div><span className="font-medium text-foreground">Ack:</span> {item.acknowledgements}</div>
                 </div>
 
-                <div className="flex items-center gap-2 mt-auto pt-4 border-t border-border">
-                  {canManageAnnouncements ? (
-                    <>
-                      <button onClick={() => openEdit(item)} className="text-sm font-medium hover:underline">Edit</button>
+                <div className="flex items-center justify-between mt-auto pt-4 border-t border-border">
+                  <div className="flex gap-4 text-xs font-medium text-muted-foreground">
+                    <span className="flex items-center gap-1" title="Views">
+                      👁️ {item.views}
+                    </span>
+                    <span className="flex items-center gap-1" title="Likes">
+                      ❤️ {item.likes}
+                    </span>
+                    <span className="flex items-center gap-1" title="Comments">
+                      💬 {item.comments}
+                    </span>
+                    <span className="flex items-center gap-1" title="Acknowledgements">
+                      ✅ {item.acknowledgements}
+                    </span>
+                  </div>
+                  
+                  {canManageAnnouncements && (
+                    <div className="flex gap-2">
+                      <button onClick={() => openEdit(item)} className="text-sm font-medium hover:underline text-foreground">Edit</button>
                       <button onClick={() => handleDelete(item.announcementId)} className="text-sm font-medium text-red-600 hover:underline">Delete</button>
-                    </>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">View Only</span>
+                    </div>
                   )}
                 </div>
               </div>

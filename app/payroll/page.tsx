@@ -70,6 +70,87 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+// ─── Compliance Dashboard ──────────────────────────────────────────────────────
+
+function ComplianceDashboard() {
+  return (
+    <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="rounded-xl border border-border bg-card p-4 shadow-sm flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-muted-foreground mb-1">Tax Filing (US/IN)</p>
+          <p className="text-lg font-semibold text-foreground">Q2 Completed</p>
+        </div>
+        <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">100%</span>
+      </div>
+      <div className="rounded-xl border border-border bg-card p-4 shadow-sm flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-muted-foreground mb-1">PF / 401k Remittance</p>
+          <p className="text-lg font-semibold text-foreground">May Processed</p>
+        </div>
+        <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">Done</span>
+      </div>
+      <div className="rounded-xl border border-border bg-card p-4 shadow-sm flex items-center justify-between border-l-4 border-l-yellow-500">
+        <div>
+          <p className="text-sm font-medium text-muted-foreground mb-1">Statutory Audits</p>
+          <p className="text-lg font-semibold text-foreground">Upcoming</p>
+        </div>
+        <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-medium">Pending</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Payslip Modal ────────────────────────────────────────────────────────────
+
+function PayslipModal({ open, record, onClose }: { open: boolean, record: Payroll | null, onClose: () => void }) {
+  if (!open || !record) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-lg rounded-xl bg-card border border-border p-6 shadow-xl relative">
+        <button onClick={onClose} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">✕</button>
+        
+        <div className="border-b border-border pb-4 mb-4 text-center">
+          <h2 className="text-2xl font-bold text-foreground">Payslip</h2>
+          <p className="text-muted-foreground text-sm">For the month of {record.month}</p>
+        </div>
+
+        <div className="space-y-4 mb-6">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Employee ID</span>
+            <span className="font-medium text-foreground">{record.employeeId}</span>
+          </div>
+          <div className="flex justify-between border-t border-border pt-2">
+            <span className="text-muted-foreground">Basic Salary</span>
+            <span className="font-medium text-foreground">${record.basicSalary.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Bonus</span>
+            <span className="font-medium text-foreground">${record.bonus.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between text-red-600">
+            <span>Deductions (Taxes/PF)</span>
+            <span>-${record.deductions.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between border-t-2 border-border pt-4 mt-4 text-lg">
+            <span className="font-bold text-foreground">Net Pay</span>
+            <span className="font-bold text-green-600">${record.netSalary.toFixed(2)}</span>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 border-t border-border pt-4">
+          <button onClick={() => {
+            toast.success("Payslip PDF downloaded!");
+            onClose();
+          }} className="rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background hover:opacity-90">
+            Download PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Payroll Drawer (right-side form panel) ──────────────────────────────────
 
 function PayrollDrawer({
@@ -219,6 +300,9 @@ export default function PayrollPage() {
   const [form,       setForm]         = useState<Omit<Payroll, "payrollId">>(EMPTY_FORM);
   const [saving,     setSaving]       = useState(false);
   const [localData,  setLocalData]    = useState<Payroll[]>(MOCK_PAYROLL);
+  
+  const [payslipModalOpen, setPayslipModalOpen] = useState(false);
+  const [selectedPayslip, setSelectedPayslip] = useState<Payroll | null>(null);
 
   const { user } = useAuth();
   const isAdmin = user?.role === "Admin";
@@ -384,23 +468,33 @@ export default function PayrollPage() {
       header: "Actions",
       cell: ({ row }) => {
         const record = row.original;
-        if (!canManagePayroll) {
-          return <span className="text-xs text-muted-foreground">View Only</span>;
-        }
         return (
           <div className="flex items-center gap-3">
             <button
-              onClick={() => openEdit(record)}
-              className="text-sm font-medium text-foreground hover:underline"
+              onClick={() => {
+                setSelectedPayslip(record);
+                setPayslipModalOpen(true);
+              }}
+              className="text-sm font-medium text-blue-600 hover:underline"
             >
-              Edit
+              View Payslip
             </button>
-            <button
-              onClick={() => handleDelete(record.payrollId)}
-              className="text-sm font-medium text-red-600 hover:underline"
-            >
-              Delete
-            </button>
+            {canManagePayroll && (
+              <>
+                <button
+                  onClick={() => openEdit(record)}
+                  className="text-sm font-medium text-foreground hover:underline"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(record.payrollId)}
+                  className="text-sm font-medium text-red-600 hover:underline"
+                >
+                  Delete
+                </button>
+              </>
+            )}
           </div>
         );
       },
@@ -432,6 +526,8 @@ export default function PayrollPage() {
             )}
           </div>
         </div>
+
+        {canManagePayroll && <ComplianceDashboard />}
 
         <DataTable
           data={payrollData}
@@ -467,6 +563,12 @@ export default function PayrollPage() {
           onChange={handleFieldChange}
           onSave={handleSave}
           saving={saving}
+        />
+
+        <PayslipModal
+          open={payslipModalOpen}
+          record={selectedPayslip}
+          onClose={() => setPayslipModalOpen(false)}
         />
       </div>
     </ProtectedRoute>

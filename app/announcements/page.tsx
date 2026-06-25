@@ -133,6 +133,10 @@ export default function AnnouncementsPage() {
   };
 
   const handleSave = async () => {
+    if (!formData.title || !formData.category || !formData.priority || !formData.content) {
+      toast.error("Please fill in all required fields (Title, Category, Priority, Content).");
+      return;
+    }
     try {
       if (editingId) {
         await updateAnnouncement({

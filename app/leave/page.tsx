@@ -286,6 +286,15 @@ export default function LeavePage() {
   }
 
   async function handleSave() {
+    if (!form.leaveType || !form.startDate || !form.endDate) {
+      toast.error("Please fill in all required fields.");
+      return;
+    }
+    if (new Date(form.endDate) < new Date(form.startDate)) {
+      toast.error("End date cannot precede start date.");
+      return;
+    }
+
     setSaving(true);
     try {
       if (drawerMode === "add") {
@@ -490,35 +499,117 @@ export default function LeavePage() {
         {/* Leave Balance Widget (Visible mostly for employees) */}
         {isEmployee && <LeaveBalanceWidget />}
 
-        <DataTable
-          data={leaveData}
-          columns={columns}
-          isLoading={loading}
-          filters={[{ type: "search", placeholder: "Search leave records…" }]}
-          quickFiltersTopBar={[
-            {
-              type: "select",
-              columnId: "status",
-              label: "Status",
-              options: [
-                { label: "Pending",  value: "Pending"  },
-                { label: "Approved", value: "Approved" },
-                { label: "Rejected", value: "Rejected" },
-              ],
-            },
-            {
-              type: "select",
-              columnId: "leaveType",
-              label: "Type",
-              options: [
-                { label: "Sick",   value: "Sick"   },
-                { label: "Casual", value: "Casual" },
-                { label: "Earned", value: "Earned" },
-              ],
-            }
-          ]}
-          initialPageSize={10}
-        />
+        <div className="hidden lg:block">
+          <DataTable
+            data={leaveData}
+            columns={columns}
+            isLoading={loading}
+            filters={[{ type: "search", placeholder: "Search leave records…" }]}
+            quickFiltersTopBar={[
+              {
+                type: "select",
+                columnId: "status",
+                label: "Status",
+                options: [
+                  { label: "Pending",  value: "Pending"  },
+                  { label: "Approved", value: "Approved" },
+                  { label: "Rejected", value: "Rejected" },
+                ],
+              },
+              {
+                type: "select",
+                columnId: "leaveType",
+                label: "Type",
+                options: [
+                  { label: "Sick",   value: "Sick"   },
+                  { label: "Casual", value: "Casual" },
+                  { label: "Earned", value: "Earned" },
+                ],
+              }
+            ]}
+            initialPageSize={10}
+          />
+        </div>
+
+        <div className="flex flex-col gap-4 lg:hidden mt-4">
+          {loading ? (
+            <div className="flex justify-center p-8">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-muted border-t-foreground"></div>
+            </div>
+          ) : leaveData.length === 0 ? (
+            <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+              No leave records found.
+            </div>
+          ) : (
+            leaveData.map((record) => (
+              <div key={record.leaveId} className="rounded-xl border border-border bg-card p-4 shadow-sm flex flex-col gap-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-semibold text-foreground">
+                      {record.leaveType} Leave
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">Emp ID: {record.employeeId}</p>
+                  </div>
+                  <StatusBadge status={record.status} />
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <p className="text-muted-foreground text-xs">Start Date</p>
+                    <p className="font-medium text-foreground">{record.startDate ? new Date(record.startDate).toLocaleDateString() : "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-xs">End Date</p>
+                    <p className="font-medium text-foreground">{record.endDate ? new Date(record.endDate).toLocaleDateString() : "-"}</p>
+                  </div>
+                </div>
+                {record.reason && (
+                  <div className="bg-muted/50 p-2 rounded text-xs text-foreground/80 line-clamp-2">
+                    {record.reason}
+                  </div>
+                )}
+                
+                <div className="flex flex-wrap gap-2 pt-2 border-t border-border mt-1">
+                  {!isFinance && (
+                    <>
+                      {canEditLeave && record.status === "Pending" ? (
+                        <>
+                          <button
+                            onClick={() => handleApproveReject(record.leaveId, "Approved")}
+                            className="flex-1 rounded bg-green-500 text-white py-1.5 text-xs font-medium hover:bg-green-600 transition-colors"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => handleApproveReject(record.leaveId, "Rejected")}
+                            className="flex-1 rounded bg-red-500 text-white py-1.5 text-xs font-medium hover:bg-red-600 transition-colors"
+                          >
+                            Reject
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => openEdit(record)}
+                          className="flex-1 rounded border border-border py-1.5 text-xs font-medium hover:bg-muted transition-colors"
+                        >
+                          {canEditLeave ? "Edit" : "View"}
+                        </button>
+                      )}
+                      
+                      {(canEditLeave || (isEmployee && record.status !== "Approved")) && (
+                        <button
+                          onClick={() => handleDelete(record.leaveId, record.status)}
+                          className="flex-1 rounded border border-red-200 text-red-600 py-1.5 text-xs font-medium hover:bg-red-50 dark:border-red-900/50 dark:hover:bg-red-950/30 transition-colors"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
 
         <LeaveDrawer
           open={drawerOpen}

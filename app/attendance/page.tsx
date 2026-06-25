@@ -373,6 +373,16 @@ export default function AttendancePage() {
   }
 
   async function handleSave() {
+    if (!form.employeeId || !form.date || !form.status) {
+      toast.error("Please fill in all required fields (Employee ID, Date, Status).");
+      return;
+    }
+    if (form.checkOutTime && form.checkInTime) {
+      if (new Date(form.checkOutTime) <= new Date(form.checkInTime)) {
+        toast.error("Check-out time must be after check-in time.");
+        return;
+      }
+    }
     setSaving(true);
     try {
       const calcOvertime = (checkIn: string, checkOut: string) => {

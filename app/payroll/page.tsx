@@ -375,6 +375,14 @@ export default function PayrollPage() {
   }
 
   async function handleSave() {
+    if (!form.employeeId || !form.month || !form.paymentStatus) {
+      toast.error("Please fill in all required fields (Employee ID, Month, Payment Status).");
+      return;
+    }
+    if (form.basicSalary < 0 || form.bonus < 0 || form.deductions < 0) {
+      toast.error("Salary amounts cannot be negative.");
+      return;
+    }
     setSaving(true);
     try {
       if (drawerMode === "add") {

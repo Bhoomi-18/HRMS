@@ -234,6 +234,10 @@ export default function EmployeesPage() {
   }
 
   async function handleSave() {
+    if (!form.firstName || !form.lastName || !form.email || !form.employeeCode || !form.joiningDate) {
+      toast.error("Please fill in all required fields (First Name, Last Name, Email, Code, Joining Date).");
+      return;
+    }
     setSaving(true);
     try {
       if (drawerMode === "add") {

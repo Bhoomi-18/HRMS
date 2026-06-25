@@ -24,9 +24,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthProvider>
-      <div className="flex h-[100dvh] flex-col lg:flex-row overflow-hidden bg-background">
+      <div className="flex h-[100dvh] flex-col overflow-hidden bg-background">
         <Sidebar />
-        <main className="flex-1 flex flex-col overflow-hidden relative">
+        <main className="flex-1 flex flex-col overflow-hidden w-full relative">
           <Navbar />
           <div className="flex-1 overflow-y-auto flex flex-col">
             <Breadcrumb />

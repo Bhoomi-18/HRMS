@@ -28,9 +28,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-200/50 flex justify-center`}
       >
-        <div className="w-full min-h-screen bg-background relative flex flex-col">
+        {/* Mobile App Container Frame */}
+        <div className="w-full max-w-md min-h-screen sm:h-[100dvh] sm:my-auto sm:max-h-[850px] bg-background sm:rounded-[2rem] sm:shadow-2xl sm:border-8 border-slate-800 relative overflow-hidden flex flex-col">
           <Providers>
             <ClientLayout>
               {children}

@@ -2,8 +2,12 @@
 
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@apollo/client/react";
+import { toast } from "sonner";
 import { ColumnDef } from "@tanstack/react-table";
+import { ProtectedRoute } from "../../components/auth/ProtectedRoute";
+import { PAGE_PERMISSIONS } from "../../config/rbac";
 import { DataTable } from "../../components/table/DataTable";
+import { useAuth } from "../../context/AuthContext";
 import { GET_ALL_PAYROLL } from "../../graphql/query/payroll";
 import { CREATE_PAYROLL } from "../../graphql/mutation/createPayroll";
 import { UPDATE_PAYROLL } from "../../graphql/mutation/updatePayroll";
@@ -216,8 +220,15 @@ export default function PayrollPage() {
   const [saving,     setSaving]       = useState(false);
   const [localData,  setLocalData]    = useState<Payroll[]>(MOCK_PAYROLL);
 
+  const { user } = useAuth();
+  const isAdmin = user?.role === "Admin";
+  const isHR = user?.role === "HR Manager";
+  const isEmployee = user?.role === "Employee";
+  const isFinance = user?.role === "Finance";
+  const canManagePayroll = isAdmin || isFinance;
+
   // ── GraphQL hooks ────────────────────────────────────────────────────────────
-  const { data, refetch } = useQuery<GetAllPayrollResult>(GET_ALL_PAYROLL, {
+  const { data, loading, refetch } = useQuery<GetAllPayrollResult>(GET_ALL_PAYROLL, {
     variables: { request: { pageCriteria: { enablePage: false, pageSize: 1000, skip: 0 } } },
     errorPolicy: "ignore",
   });
@@ -226,11 +237,19 @@ export default function PayrollPage() {
   const [deletePayroll] = useMutation(DELETE_PAYROLL);
 
   // Use live data if available, otherwise use local state (mock or optimistic)
-  const payrollData: Payroll[] = data?.getAllPayroll?.data?.payroll ?? localData;
+  const rawData: Payroll[] = data?.getAllPayroll?.data?.payroll ?? localData;
+  const payrollData = rawData.filter(item => {
+    if (isEmployee) return item.employeeId === user?.id;
+    return true;
+  });
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
   function openAdd() {
+    if (isEmployee) {
+      toast.error("You don't have permission for this action.");
+      return;
+    }
     setForm(EMPTY_FORM);
     setDrawerMode("add");
     setEditingId(null);
@@ -238,6 +257,10 @@ export default function PayrollPage() {
   }
 
   function openEdit(record: Payroll) {
+    if (!canManagePayroll) {
+      toast.error("You don't have permission for this action.");
+      return;
+    }
     const { payrollId, ...rest } = record;
     setForm(rest);
     setEditingId(payrollId);
@@ -259,8 +282,9 @@ export default function PayrollPage() {
       if (drawerMode === "add") {
         await createPayroll({
           variables: { request: { requestParam: form } },
-        }).catch(() => {
+        }).then(() => toast.success("Action completed successfully.")).catch(() => {
           // Optimistic local update when backend unavailable
+          toast.error("Network error. Using mock data.");
           setLocalData((prev) => [
             ...prev,
             { ...form, payrollId: `local-${Date.now()}` },
@@ -269,7 +293,8 @@ export default function PayrollPage() {
       } else if (editingId) {
         await updatePayroll({
           variables: { request: { requestParam: { ...form, payrollId: editingId } } },
-        }).catch(() => {
+        }).then(() => toast.success("Action completed successfully.")).catch(() => {
+          toast.error("Network error. Using mock data.");
           setLocalData((prev) =>
             prev.map((p) => (p.payrollId === editingId ? { ...form, payrollId: editingId } : p))
           );
@@ -283,10 +308,15 @@ export default function PayrollPage() {
   }
 
   async function handleDelete(payrollId: string) {
+    if (!canManagePayroll) {
+      toast.error("You don't have permission for this action.");
+      return;
+    }
     if (!window.confirm("Delete this payroll record?")) return;
     await deletePayroll({
       variables: { request: { requestParam: { payrollId } } },
-    }).catch(() => {
+    }).then(() => toast.success("Action completed successfully.")).catch(() => {
+      toast.error("Network error. Using mock data.");
       setLocalData((prev) => prev.filter((p) => p.payrollId !== payrollId));
     });
     await refetch().catch(() => {});
@@ -352,82 +382,93 @@ export default function PayrollPage() {
     {
       id: "actions",
       header: "Actions",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => openEdit(row.original)}
-            className="rounded border border-border px-2 py-1 text-xs hover:bg-muted/40"
-          >
-            Edit
-          </button>
-          <button
-            onClick={() => handleDelete(row.original.payrollId)}
-            className="rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50"
-          >
-            Delete
-          </button>
-        </div>
-      ),
+      cell: ({ row }) => {
+        const record = row.original;
+        if (!canManagePayroll) {
+          return <span className="text-xs text-muted-foreground">View Only</span>;
+        }
+        return (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => openEdit(record)}
+              className="text-sm font-medium text-foreground hover:underline"
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => handleDelete(record.payrollId)}
+              className="text-sm font-medium text-red-600 hover:underline"
+            >
+              Delete
+            </button>
+          </div>
+        );
+      },
     },
   ];
 
   // ─────────────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      {/* Page header */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-semibold text-foreground">Payroll Management</h1>
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            onClick={handleExportCSV}
-            className="rounded border border-border bg-background px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-          >
-            Export CSV
-          </button>
-          <button
-            onClick={openAdd}
-            className="rounded bg-foreground px-4 py-2 text-sm text-background hover:opacity-90"
-          >
-            + Add Payroll
-          </button>
+    <ProtectedRoute roles={PAGE_PERMISSIONS.payroll}>
+      <div className="min-h-screen bg-background p-8">
+        {/* Page header */}
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-2xl font-semibold text-foreground">Payroll Management</h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={handleExportCSV}
+              className="rounded border border-border bg-background px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+            >
+              Export CSV
+            </button>
+            {!isEmployee && (
+              <button
+                onClick={openAdd}
+                className="rounded bg-foreground px-4 py-2 text-sm text-background hover:opacity-90"
+              >
+                + Add Payroll
+              </button>
+            )}
+          </div>
         </div>
+
+        <DataTable
+          data={payrollData}
+          columns={columns}
+          isLoading={loading}
+          filters={[{ type: "search", placeholder: "Search payroll records…" }]}
+          quickFiltersTopBar={[
+            {
+              type: "select",
+              columnId: "paymentStatus",
+              label: "Payment Status",
+              options: [
+                { label: "Pending", value: "Pending" },
+                { label: "Paid",    value: "Paid"    },
+                { label: "Failed",  value: "Failed"  },
+              ],
+            },
+            {
+              type: "select",
+              columnId: "month",
+              label: "Month",
+              options: monthOptions,
+            }
+          ]}
+          initialPageSize={10}
+        />
+
+        <PayrollDrawer
+          open={drawerOpen}
+          mode={drawerMode}
+          form={form}
+          onClose={closeDrawer}
+          onChange={handleFieldChange}
+          onSave={handleSave}
+          saving={saving}
+        />
       </div>
-
-      <DataTable
-        data={payrollData}
-        columns={columns}
-        filters={[{ type: "search", placeholder: "Search payroll records…" }]}
-        quickFiltersTopBar={[
-          {
-            type: "select",
-            columnId: "paymentStatus",
-            label: "Payment Status",
-            options: [
-              { label: "Pending", value: "Pending" },
-              { label: "Paid",    value: "Paid"    },
-              { label: "Failed",  value: "Failed"  },
-            ],
-          },
-          {
-            type: "select",
-            columnId: "month",
-            label: "Month",
-            options: monthOptions,
-          }
-        ]}
-        initialPageSize={10}
-      />
-
-      <PayrollDrawer
-        open={drawerOpen}
-        mode={drawerMode}
-        form={form}
-        onClose={closeDrawer}
-        onChange={handleFieldChange}
-        onSave={handleSave}
-        saving={saving}
-      />
-    </div>
+    </ProtectedRoute>
   );
 }

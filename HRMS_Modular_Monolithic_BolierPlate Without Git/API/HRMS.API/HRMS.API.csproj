@@ -26,6 +26,8 @@
     <ProjectReference Include="..\..\Modules\LeaveFeature\LeaveFeature.Infrastructure\LeaveFeature.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\PayrollFeature\PayrollFeature.GraphQL\PayrollFeature.GraphQL.csproj" />
     <ProjectReference Include="..\..\Modules\PayrollFeature\PayrollFeature.Infrastructure\PayrollFeature.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\AnnouncementFeature\AnnouncementFeature.GraphQL\AnnouncementFeature.GraphQL.csproj" />
+    <ProjectReference Include="..\..\Modules\AnnouncementFeature\AnnouncementFeature.Infrastructure\AnnouncementFeature.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Shared\HRMS.Shared.Infrastructure\HRMS.Shared.Infrastructure.csproj" />
   </ItemGroup>
 

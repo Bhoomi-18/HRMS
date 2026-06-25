@@ -55,6 +55,7 @@ export type DataTableProps<TData> = {
 	filters?: FilterConfig;
 	quickFiltersTopBar?: Array<SelectFilter>;
 	className?: string;
+	isLoading?: boolean;
 };
 
 type InternalFilterState = {
@@ -95,6 +96,7 @@ export function DataTable<TData>({
 	filters = [{ type: "search", placeholder: "Search…" }],
 	quickFiltersTopBar = [],
 	className,
+	isLoading = false,
 }: DataTableProps<TData>) {
 	const [sorting, setSorting] = useState<SortingState>([]);
 	const [pageSize, setPageSize] = useState<number>(initialPageSize);
@@ -276,7 +278,17 @@ export function DataTable<TData>({
 						))}
 					</thead>
 					<tbody>
-						{table.getRowModel().rows.length ? (
+						{isLoading ? (
+							Array.from({ length: 5 }).map((_, i) => (
+								<tr key={`skeleton-${i}`} className="border-b border-border">
+									{columns.map((col, j) => (
+										<td key={`skeleton-col-${j}`} className="px-3 py-4">
+											<div className="h-4 w-full animate-pulse rounded bg-muted"></div>
+										</td>
+									))}
+								</tr>
+							))
+						) : table.getRowModel().rows.length ? (
 							table.getRowModel().rows.map((row) => (
 								<tr key={row.id} className="border-b border-border hover:bg-muted/30">
 									{row.getVisibleCells().map((cell) => (
@@ -288,8 +300,12 @@ export function DataTable<TData>({
 							))
 						) : (
 							<tr>
-								<td colSpan={columns.length} className="px-3 py-6 text-center text-muted-foreground">
-									No results
+								<td colSpan={columns.length} className="px-6 py-12 text-center">
+									<div className="flex flex-col items-center justify-center space-y-3">
+										<span className="text-4xl opacity-80">📭</span>
+										<h3 className="text-lg font-medium text-foreground">No records found</h3>
+										<p className="text-sm text-muted-foreground max-w-sm mx-auto">We couldn't find anything matching your search criteria. Try adjusting your filters.</p>
+									</div>
 								</td>
 							</tr>
 						)}

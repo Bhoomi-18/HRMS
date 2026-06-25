@@ -4,6 +4,7 @@ using EmployeeFeature.GraphQL;
 using AttendanceFeature.GraphQL;
 using LeaveFeature.GraphQL;
 using PayrollFeature.GraphQL;
+using AnnouncementFeature.GraphQL;
 
 namespace HRMS.API.RegisterDependencies
 {
@@ -16,7 +17,8 @@ namespace HRMS.API.RegisterDependencies
                 .AddEmployeesGraphQL()
                 .AddAttendanceGraphQL()
                 .AddLeaveGraphQL()
-                .AddPayrollGraphQL();
+                .AddPayrollGraphQL()
+                .AddAnnouncementGraphQL();
         }
     }
 }

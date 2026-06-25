@@ -2,8 +2,12 @@
 
 import { useState } from "react";
 import { useQuery, useMutation } from "@apollo/client/react";
+import { toast } from "sonner";
 import { ColumnDef } from "@tanstack/react-table";
+import { ProtectedRoute } from "../../components/auth/ProtectedRoute";
+import { PAGE_PERMISSIONS } from "../../config/rbac";
 import { DataTable } from "../../components/table/DataTable";
+import { useAuth } from "../../context/AuthContext";
 import { GET_ALL_LEAVE } from "../../graphql/query/leave";
 import { CREATE_LEAVE } from "../../graphql/mutation/createLeave";
 import { UPDATE_LEAVE } from "../../graphql/mutation/updateLeave";
@@ -67,16 +71,26 @@ function StatusBadge({ status }: { status: string }) {
 // ─── Leave Drawer (right-side form panel) ──────────────────────────────────
 
 function LeaveDrawer({
-  open, mode, form, onClose, onChange, onSave, saving,
+  open,
+  mode,
+  form,
+  onClose,
+  onChange,
+  onSave,
+  saving,
 }: {
   open: boolean;
   mode: "add" | "edit";
   form: Omit<Leave, "leaveId">;
   onClose: () => void;
-  onChange: (field: keyof typeof EMPTY_FORM, value: string) => void;
+  onChange: (field: keyof Omit<Leave, "leaveId">, value: string) => void;
   onSave: () => void;
   saving: boolean;
 }) {
+  const { user } = useAuth();
+  const isEmployee = user?.role === "Employee";
+
+  if (!open) return null;
   return (
     <>
       {open && <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} aria-hidden="true" />}
@@ -102,9 +116,10 @@ function LeaveDrawer({
             <label className="text-sm font-medium text-foreground">Employee ID</label>
             <input
               type="text"
-              value={form.employeeId}
+              value={isEmployee ? user?.id : form.employeeId}
               onChange={(e) => onChange("employeeId", e.target.value)}
-              className="h-9 rounded border border-border bg-background px-3 text-sm text-foreground"
+              disabled={isEmployee}
+              className={`h-9 rounded border border-border px-3 text-sm text-foreground ${isEmployee ? 'bg-muted cursor-not-allowed' : 'bg-background'}`}
             />
           </div>
 
@@ -192,8 +207,15 @@ export default function LeavePage() {
   const [saving,     setSaving]       = useState(false);
   const [localData,  setLocalData]    = useState<Leave[]>(MOCK_LEAVE);
 
+  const { user } = useAuth();
+  const isAdmin = user?.role === "Admin";
+  const isHR = user?.role === "HR Manager";
+  const isEmployee = user?.role === "Employee";
+  const isFinance = user?.role === "Finance";
+  const canEditLeave = isAdmin || isHR;
+
   // ── GraphQL hooks ────────────────────────────────────────────────────────────
-  const { data, refetch } = useQuery<GetAllLeaveResult>(GET_ALL_LEAVE, {
+  const { data, loading, refetch } = useQuery<GetAllLeaveResult>(GET_ALL_LEAVE, {
     variables: { request: { pageCriteria: { enablePage: false, pageSize: 1000, skip: 0 } } },
     errorPolicy: "ignore",
   });
@@ -202,18 +224,26 @@ export default function LeavePage() {
   const [deleteLeave] = useMutation(DELETE_LEAVE);
 
   // Use live data if available, otherwise use local state (mock or optimistic)
-  const leaveData: Leave[] = data?.getAllLeave?.data?.leave ?? localData;
+  const rawData: Leave[] = data?.getAllLeave?.data?.leave ?? localData;
+  const leaveData = rawData.filter(item => {
+    if (isEmployee) return item.employeeId === user?.id;
+    return true;
+  });
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
   function openAdd() {
-    setForm(EMPTY_FORM);
+    setForm({ ...EMPTY_FORM, employeeId: isEmployee ? (user?.id ?? "") : "" });
     setDrawerMode("add");
     setEditingId(null);
     setDrawerOpen(true);
   }
 
   function openEdit(record: Leave) {
+    if (isFinance) {
+      toast.error("You don't have permission for this action.");
+      return;
+    }
     const { leaveId, ...rest } = record;
     setForm(rest);
     setEditingId(leaveId);
@@ -233,19 +263,22 @@ export default function LeavePage() {
     setSaving(true);
     try {
       if (drawerMode === "add") {
+        const payload = isEmployee ? { ...form, employeeId: user?.id || form.employeeId } : form;
         await createLeave({
-          variables: { request: { requestParam: form } },
-        }).catch(() => {
+          variables: { request: { requestParam: payload } },
+        }).then(() => toast.success("Action completed successfully.")).catch(() => {
           // Optimistic local update when backend unavailable
+          toast.error("Network error. Using mock data.");
           setLocalData((prev) => [
             ...prev,
-            { ...form, leaveId: `local-${Date.now()}` },
+            { ...payload, leaveId: `local-${Date.now()}` },
           ]);
         });
       } else if (editingId) {
         await updateLeave({
           variables: { request: { requestParam: { ...form, leaveId: editingId } } },
-        }).catch(() => {
+        }).then(() => toast.success("Action completed successfully.")).catch(() => {
+          toast.error("Network error. Using mock data.");
           setLocalData((prev) =>
             prev.map((l) => (l.leaveId === editingId ? { ...form, leaveId: editingId } : l))
           );
@@ -258,11 +291,25 @@ export default function LeavePage() {
     }
   }
 
-  async function handleDelete(leaveId: string) {
+  async function handleDelete(leaveId: string, status: string) {
+    if (isFinance) {
+      toast.error("You don't have permission for this action.");
+      return;
+    }
+    if (isEmployee && status === "Approved") {
+      toast.error("Cannot delete an approved leave.");
+      return;
+    }
+    if (!canEditLeave && status === "Approved") {
+      // Just enforcing the role based check just in case.
+      toast.error("Cannot delete an approved leave.");
+      return;
+    }
     if (!window.confirm("Delete this leave record?")) return;
     await deleteLeave({
       variables: { request: { requestParam: { leaveId } } },
-    }).catch(() => {
+    }).then(() => toast.success("Action completed successfully.")).catch(() => {
+      toast.error("Network error. Using mock data.");
       setLocalData((prev) => prev.filter((l) => l.leaveId !== leaveId));
     });
     await refetch().catch(() => {});
@@ -321,86 +368,99 @@ export default function LeavePage() {
     {
       id: "actions",
       header: "Actions",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => openEdit(row.original)}
-            className="rounded border border-border px-2 py-1 text-xs hover:bg-muted/40"
-          >
-            Edit
-          </button>
-          <button
-            onClick={() => handleDelete(row.original.leaveId)}
-            className="rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50"
-          >
-            Delete
-          </button>
-        </div>
-      ),
+      cell: ({ row }) => {
+        const record = row.original;
+        if (isFinance) {
+          return <span className="text-xs text-muted-foreground">View Only</span>;
+        }
+        return (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => openEdit(record)}
+              className="text-sm font-medium text-foreground hover:underline"
+            >
+              Edit
+            </button>
+            {(canEditLeave || (isEmployee && record.status !== "Approved")) && (
+              <button
+                onClick={() => handleDelete(record.leaveId, record.status)}
+                className="text-sm font-medium text-red-600 hover:underline"
+              >
+                Delete
+              </button>
+            )}
+          </div>
+        );
+      },
     },
   ];
 
-  // ─────────────────────────────────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      {/* Page header */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-semibold text-foreground">Leave Management</h1>
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            onClick={handleExportCSV}
-            className="rounded border border-border bg-background px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-          >
-            Export CSV
-          </button>
-          <button
-            onClick={openAdd}
-            className="rounded bg-foreground px-4 py-2 text-sm text-background hover:opacity-90"
-          >
-            + Apply Leave
-          </button>
+    <ProtectedRoute roles={PAGE_PERMISSIONS.leave}>
+      <div className="min-h-screen bg-background p-6 md:p-8">
+        {/* Page header */}
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-2xl font-semibold text-foreground">Leave Management</h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={handleExportCSV}
+              className="rounded border border-border bg-background px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+            >
+              Export CSV
+            </button>
+            {!isFinance && (
+              <button
+                onClick={openAdd}
+                className="rounded bg-foreground px-4 py-2 text-sm text-background hover:opacity-90"
+              >
+                + Apply Leave
+              </button>
+            )}
+          </div>
         </div>
+
+        <DataTable
+          data={leaveData}
+          columns={columns}
+          isLoading={loading}
+          filters={[{ type: "search", placeholder: "Search leave records…" }]}
+          quickFiltersTopBar={[
+            {
+              type: "select",
+              columnId: "status",
+              label: "Status",
+              options: [
+                { label: "Pending",  value: "Pending"  },
+                { label: "Approved", value: "Approved" },
+                { label: "Rejected", value: "Rejected" },
+              ],
+            },
+            {
+              type: "select",
+              columnId: "leaveType",
+              label: "Type",
+              options: [
+                { label: "Sick",   value: "Sick"   },
+                { label: "Casual", value: "Casual" },
+                { label: "Earned", value: "Earned" },
+              ],
+            }
+          ]}
+          initialPageSize={10}
+        />
+
+        <LeaveDrawer
+          open={drawerOpen}
+          mode={drawerMode}
+          form={form}
+          onClose={closeDrawer}
+          onChange={handleFieldChange}
+          onSave={handleSave}
+          saving={saving}
+        />
       </div>
-
-      <DataTable
-        data={leaveData}
-        columns={columns}
-        filters={[{ type: "search", placeholder: "Search leave records…" }]}
-        quickFiltersTopBar={[
-          {
-            type: "select",
-            columnId: "status",
-            label: "Status",
-            options: [
-              { label: "Pending",  value: "Pending"  },
-              { label: "Approved", value: "Approved" },
-              { label: "Rejected", value: "Rejected" },
-            ],
-          },
-          {
-            type: "select",
-            columnId: "leaveType",
-            label: "Type",
-            options: [
-              { label: "Sick",   value: "Sick"   },
-              { label: "Casual", value: "Casual" },
-              { label: "Earned", value: "Earned" },
-            ],
-          }
-        ]}
-        initialPageSize={10}
-      />
-
-      <LeaveDrawer
-        open={drawerOpen}
-        mode={drawerMode}
-        form={form}
-        onClose={closeDrawer}
-        onChange={handleFieldChange}
-        onSave={handleSave}
-        saving={saving}
-      />
-    </div>
+    </ProtectedRoute>
   );
 }

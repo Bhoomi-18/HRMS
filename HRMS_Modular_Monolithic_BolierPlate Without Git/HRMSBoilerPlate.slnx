@@ -33,6 +33,12 @@
     <Project Path="Modules/PayrollFeature/PayrollFeature.GraphQL/PayrollFeature.GraphQL.csproj" Id="cdef1234-5678-9012-3456-7890abcdef12" />
     <Project Path="Modules/PayrollFeature/PayrollFeature.Infrastructure/PayrollFeature.Infrastructure.csproj" Id="def12345-6789-0123-4567-890abcdef123" />
   </Folder>
+  <Folder Name="/Modules/AnnouncementFeature/">
+    <Project Path="Modules/AnnouncementFeature/AnnouncementFeature.Application/AnnouncementFeature.Application.csproj" Id="eef12345-6789-0123-4567-890abcdef124" />
+    <Project Path="Modules/AnnouncementFeature/AnnouncementFeature.Domain/AnnouncementFeature.Domain.csproj" Id="fef12345-6789-0123-4567-890abcdef125" />
+    <Project Path="Modules/AnnouncementFeature/AnnouncementFeature.GraphQL/AnnouncementFeature.GraphQL.csproj" Id="0ef12345-6789-0123-4567-890abcdef126" />
+    <Project Path="Modules/AnnouncementFeature/AnnouncementFeature.Infrastructure/AnnouncementFeature.Infrastructure.csproj" Id="1ef12345-6789-0123-4567-890abcdef127" />
+  </Folder>
   <Folder Name="/Shared/">
     <Project Path="Shared/HRMS.Shared.Application/HRMS.Shared.Application.csproj" Id="2986d168-4e45-495e-8b00-09f1650c14e7" />
     <Project Path="Shared/HRMS.Shared.Domain/HRMS.Shared.Domain.csproj" Id="7f46f091-c7f3-46ef-a6b8-21bc45c85ea1" />

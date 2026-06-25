@@ -2,9 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { useQuery, useMutation } from "@apollo/client/react";
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "../../components/table/DataTable";
+import { ProtectedRoute } from "../../components/auth/ProtectedRoute";
+import { PAGE_PERMISSIONS } from "../../config/rbac";
 import { GET_ALL_EMPLOYEES } from "../../graphql/query/employees";
 import { CREATE_EMPLOYEE } from "../../graphql/mutation/createEmployee";
 import { UPDATE_EMPLOYEE } from "../../graphql/mutation/updateEmployee";
@@ -187,7 +190,7 @@ export default function EmployeesPage() {
   const [localData,  setLocalData]    = useState<Employee[]>(MOCK_EMPLOYEES);
 
   // ── GraphQL hooks ────────────────────────────────────────────────────────────
-  const { data, refetch } = useQuery<GetAllEmployeesResult>(GET_ALL_EMPLOYEES, {
+  const { data, loading, refetch } = useQuery<GetAllEmployeesResult>(GET_ALL_EMPLOYEES, {
     variables: { request: { pageCriteria: { enablePage: false, pageSize: 1000, skip: 0 } } },
     errorPolicy: "ignore",
   });
@@ -229,8 +232,9 @@ export default function EmployeesPage() {
       if (drawerMode === "add") {
         await createEmployee({
           variables: { request: { requestParam: form } },
-        }).catch(() => {
+        }).then(() => toast.success("Employee added successfully!")).catch(() => {
           // Optimistic local update when backend unavailable
+          toast.error("Network error. Using mock data.");
           setLocalData((prev) => [
             ...prev,
             { ...form, employeeId: `local-${Date.now()}` },
@@ -239,7 +243,8 @@ export default function EmployeesPage() {
       } else if (editingId) {
         await updateEmployee({
           variables: { request: { requestParam: { ...form, employeeId: editingId } } },
-        }).catch(() => {
+        }).then(() => toast.success("Employee updated successfully!")).catch(() => {
+          toast.error("Network error. Using mock data.");
           setLocalData((prev) =>
             prev.map((e) => (e.employeeId === editingId ? { ...form, employeeId: editingId } : e))
           );
@@ -256,7 +261,8 @@ export default function EmployeesPage() {
     if (!window.confirm("Delete this employee?")) return;
     await deleteEmployee({
       variables: { request: { requestParam: { employeeId } } },
-    }).catch(() => {
+    }).then(() => toast.success("Employee deleted successfully!")).catch(() => {
+      toast.error("Network error. Using mock data.");
       setLocalData((prev) => prev.filter((e) => e.employeeId !== employeeId));
     });
     await refetch().catch(() => {});
@@ -331,66 +337,69 @@ export default function EmployeesPage() {
     },
   ];
 
-  // ─────────────────────────────────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      {/* Page header */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-semibold text-foreground">Employees</h1>
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            onClick={handleExportCSV}
-            className="rounded border border-border bg-background px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-          >
-            Export CSV
-          </button>
-          <button
-            onClick={openAdd}
-            className="rounded bg-foreground px-4 py-2 text-sm text-background hover:opacity-90"
-          >
-            + Add Employee
-          </button>
+    <ProtectedRoute roles={PAGE_PERMISSIONS.employees}>
+      <div className="min-h-screen bg-background p-8">
+        {/* Page header */}
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-2xl font-semibold text-foreground">Employees</h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={handleExportCSV}
+              className="rounded border border-border bg-background px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+            >
+              Export CSV
+            </button>
+            <button
+              onClick={openAdd}
+              className="rounded bg-foreground px-4 py-2 text-sm text-background hover:opacity-90"
+            >
+              + Add Employee
+            </button>
+          </div>
         </div>
+
+        <DataTable
+          data={employees}
+          columns={columns}
+          isLoading={loading}
+          filters={[{ type: "search", placeholder: "Search employees…" }]}
+          quickFiltersTopBar={[
+            {
+              type: "select",
+              columnId: "status",
+              label: "Status",
+              options: [
+                { label: "Active",   value: "Active"   },
+                { label: "On Leave", value: "OnLeave"  },
+                { label: "Inactive", value: "Inactive" },
+              ],
+            },
+            {
+              type: "select",
+              columnId: "department",
+              label: "Department",
+              options: Array.from(new Set(employees.map((e) => e.department))).map((d) => ({
+                label: d,
+                value: d,
+              })),
+            },
+          ]}
+          initialPageSize={10}
+        />
+
+        <EmployeeDrawer
+          open={drawerOpen}
+          mode={drawerMode}
+          form={form}
+          onClose={closeDrawer}
+          onChange={handleFieldChange}
+          onSave={handleSave}
+          saving={saving}
+        />
       </div>
-
-      <DataTable
-        data={employees}
-        columns={columns}
-        filters={[{ type: "search", placeholder: "Search employees…" }]}
-        quickFiltersTopBar={[
-          {
-            type: "select",
-            columnId: "status",
-            label: "Status",
-            options: [
-              { label: "Active",   value: "Active"   },
-              { label: "On Leave", value: "OnLeave"  },
-              { label: "Inactive", value: "Inactive" },
-            ],
-          },
-          {
-            type: "select",
-            columnId: "department",
-            label: "Department",
-            options: Array.from(new Set(employees.map((e) => e.department))).map((d) => ({
-              label: d,
-              value: d,
-            })),
-          },
-        ]}
-        initialPageSize={10}
-      />
-
-      <EmployeeDrawer
-        open={drawerOpen}
-        mode={drawerMode}
-        form={form}
-        onClose={closeDrawer}
-        onChange={handleFieldChange}
-        onSave={handleSave}
-        saving={saving}
-      />
-    </div>
+    </ProtectedRoute>
   );
 }

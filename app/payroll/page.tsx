@@ -24,6 +24,7 @@ type Payroll = {
   deductions: number;
   netSalary: number;
   paymentStatus: string;
+  country?: "IN" | "US";
 };
 
 type GetAllPayrollResult = {
@@ -37,10 +38,10 @@ type GetAllPayrollResult = {
 // ─── Mock Data (fallback when GraphQL is not connected) ───────────────────────
 
 const MOCK_PAYROLL: Payroll[] = [
-  { payrollId: "1", employeeId: "EMP001", month: "2026-06", basicSalary: 5000, bonus: 500, deductions: 200, netSalary: 5300, paymentStatus: "Paid" },
-  { payrollId: "2", employeeId: "EMP002", month: "2026-06", basicSalary: 6000, bonus: 0,   deductions: 300, netSalary: 5700, paymentStatus: "Pending" },
-  { payrollId: "3", employeeId: "EMP003", month: "2026-06", basicSalary: 4500, bonus: 200, deductions: 100, netSalary: 4600, paymentStatus: "Paid" },
-  { payrollId: "4", employeeId: "EMP004", month: "2026-05", basicSalary: 5500, bonus: 100, deductions: 150, netSalary: 5450, paymentStatus: "Paid" },
+  { payrollId: "1", employeeId: "EMP001", month: "2026-06", basicSalary: 5000, bonus: 500, deductions: 200, netSalary: 5300, paymentStatus: "Paid", country: "US" },
+  { payrollId: "2", employeeId: "EMP002", month: "2026-06", basicSalary: 60000, bonus: 0,   deductions: 3000, netSalary: 57000, paymentStatus: "Pending", country: "IN" },
+  { payrollId: "3", employeeId: "EMP003", month: "2026-06", basicSalary: 4500, bonus: 200, deductions: 100, netSalary: 4600, paymentStatus: "Paid", country: "US" },
+  { payrollId: "4", employeeId: "EMP004", month: "2026-05", basicSalary: 55000, bonus: 1000, deductions: 1500, netSalary: 54500, paymentStatus: "Paid", country: "IN" },
 ];
 
 // ─── Empty form state ─────────────────────────────────────────────────────────
@@ -111,7 +112,14 @@ function PayslipModal({ open, record, onClose }: { open: boolean, record: Payrol
         <button onClick={onClose} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">✕</button>
         
         <div className="border-b border-border pb-4 mb-4 text-center">
-          <h2 className="text-2xl font-bold text-foreground">Payslip</h2>
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <h2 className="text-2xl font-bold text-foreground">Payslip</h2>
+            {record.country && (
+              <span className="text-lg" title={record.country === "IN" ? "India" : "United States"}>
+                {record.country === "IN" ? "🇮🇳" : "🇺🇸"}
+              </span>
+            )}
+          </div>
           <p className="text-muted-foreground text-sm">For the month of {record.month}</p>
         </div>
 
@@ -122,19 +130,25 @@ function PayslipModal({ open, record, onClose }: { open: boolean, record: Payrol
           </div>
           <div className="flex justify-between border-t border-border pt-2">
             <span className="text-muted-foreground">Basic Salary</span>
-            <span className="font-medium text-foreground">${record.basicSalary.toFixed(2)}</span>
+            <span className="font-medium text-foreground">{record.country === "IN" ? "₹" : "$"}{record.basicSalary.toFixed(2)}</span>
           </div>
+          {record.country === "IN" && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">HRA (Housing Rent Allowance)</span>
+              <span className="font-medium text-foreground">₹{(record.basicSalary * 0.4).toFixed(2)}</span>
+            </div>
+          )}
           <div className="flex justify-between">
             <span className="text-muted-foreground">Bonus</span>
-            <span className="font-medium text-foreground">${record.bonus.toFixed(2)}</span>
+            <span className="font-medium text-foreground">{record.country === "IN" ? "₹" : "$"}{record.bonus.toFixed(2)}</span>
           </div>
           <div className="flex justify-between text-red-600">
-            <span>Deductions (Taxes/PF)</span>
-            <span>-${record.deductions.toFixed(2)}</span>
+            <span>{record.country === "IN" ? "Deductions (PF / ESI / TDS)" : "Deductions (Federal / State / 401k)"}</span>
+            <span>-{record.country === "IN" ? "₹" : "$"}{record.deductions.toFixed(2)}</span>
           </div>
           <div className="flex justify-between border-t-2 border-border pt-4 mt-4 text-lg">
             <span className="font-bold text-foreground">Net Pay</span>
-            <span className="font-bold text-green-600">${record.netSalary.toFixed(2)}</span>
+            <span className="font-bold text-green-600">{record.country === "IN" ? "₹" : "$"}{record.netSalary.toFixed(2)}</span>
           </div>
         </div>
 

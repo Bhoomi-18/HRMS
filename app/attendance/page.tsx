@@ -94,16 +94,42 @@ function ShiftCalendar() {
 
 // ─── Clock In / Out Modal ─────────────────────────────────────────────────────
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 function ClockModal({ open, onClose, isClockingOut, onConfirm }: { open: boolean, onClose: () => void, isClockingOut: boolean, onConfirm: () => void }) {
   const [verifying, setVerifying] = useState(true);
+  const [captured, setCaptured] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
   
   useEffect(() => {
+    let stream: MediaStream | null = null;
     if(open) {
       setVerifying(true);
-      const t = setTimeout(() => setVerifying(false), 1500);
-      return () => clearTimeout(t);
+      setCaptured(false);
+      
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(s => {
+          stream = s;
+          if (videoRef.current) {
+            videoRef.current.srcObject = s;
+          }
+        })
+        .catch(err => {
+          console.error("Camera error:", err);
+          toast.error("Camera access denied or unavailable.");
+        });
+
+      const t = setTimeout(() => {
+        setVerifying(false);
+        setCaptured(true);
+      }, 3000);
+      
+      return () => {
+        clearTimeout(t);
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+        }
+      };
     }
   }, [open]);
 
@@ -113,14 +139,18 @@ function ClockModal({ open, onClose, isClockingOut, onConfirm }: { open: boolean
       <div className="w-full max-w-sm rounded-xl bg-card border border-border p-6 shadow-xl">
         <h2 className="text-xl font-bold mb-4 text-foreground">{isClockingOut ? "Clock Out Verification" : "Clock In Verification"}</h2>
         
-        {/* Mock Camera View */}
-        <div className="h-48 bg-muted rounded-lg flex items-center justify-center mb-4 border-2 border-dashed border-border relative overflow-hidden">
-           {verifying ? (
-             <span className="animate-pulse text-muted-foreground font-medium">Accessing Camera...</span>
-           ) : (
-             <div className="absolute inset-0 bg-green-100/20 flex flex-col items-center justify-center">
-               <span className="text-5xl mb-2">👤</span>
-               <span className="text-xs font-semibold text-green-700 bg-green-100 px-2 py-1 rounded-full">Selfie Captured</span>
+        {/* Real Camera View */}
+        <div className="h-48 bg-black rounded-lg flex items-center justify-center mb-4 border-2 border-border relative overflow-hidden">
+           <video ref={videoRef} autoPlay playsInline muted className={`w-full h-full object-cover ${captured ? 'opacity-50' : 'opacity-100'}`} />
+           {verifying && (
+             <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
+               <span className="animate-pulse text-white font-medium drop-shadow-md">Verifying Face...</span>
+             </div>
+           )}
+           {captured && !verifying && (
+             <div className="absolute inset-0 bg-green-900/30 flex flex-col items-center justify-center backdrop-blur-[1px]">
+               <span className="text-4xl mb-2">✅</span>
+               <span className="text-xs font-semibold text-white bg-green-600 px-3 py-1 rounded-full shadow">Selfie Verified</span>
              </div>
            )}
         </div>

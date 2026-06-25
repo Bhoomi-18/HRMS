@@ -26,6 +26,7 @@ export function Sidebar() {
     { name: "Recruitment", href: "/recruitment", icon: "🎯", roles: PAGE_PERMISSIONS.recruitment },
     { name: "Onboarding", href: "/onboarding", icon: "🚀", roles: PAGE_PERMISSIONS.onboarding },
     { name: "Training", href: "/training", icon: "🎓", roles: PAGE_PERMISSIONS.training },
+    { name: "Contributions", href: "/contributions", icon: "⭐", roles: PAGE_PERMISSIONS.contributions },
   ];
 
   const links = allLinks.filter(link => {
@@ -36,7 +37,7 @@ export function Sidebar() {
   return (
     <>
       {/* Mobile Hamburger Header */}
-      <div className="lg:hidden flex items-center justify-between bg-background border-b border-border p-4 sticky top-0 z-20">
+      <div className="flex items-center justify-between bg-background border-b border-border p-4 sticky top-0 z-20">
         <span className="font-bold text-lg tracking-wide">HRMS Pro <span className="text-xs text-muted-foreground ml-1">v1.0</span></span>
         <button 
           onClick={() => setIsOpen(!isOpen)} 
@@ -60,22 +61,22 @@ export function Sidebar() {
       {/* Mobile Backdrop */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black/40 z-30 lg:hidden backdrop-blur-sm transition-opacity" 
+          className="fixed inset-0 bg-black/40 z-30 backdrop-blur-sm transition-opacity" 
           onClick={() => setIsOpen(false)} 
         />
       )}
 
       {/* Sidebar Navigation */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 bg-background border-r border-border flex flex-col transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:fixed lg:h-screen ${
+        className={`fixed inset-y-0 left-0 z-40 w-64 bg-background border-r border-border flex flex-col transform transition-transform duration-300 ease-in-out ${
           isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"
         }`}
       >
-        <div className="hidden lg:flex h-16 items-center justify-center border-b border-border">
+        <div className="flex h-16 items-center justify-center border-b border-border">
           <span className="text-xl font-bold tracking-wider text-foreground">HRMS Pro <span className="text-xs font-normal text-muted-foreground ml-1">v1.0</span></span>
         </div>
         
-        <nav className="flex-1 overflow-y-auto p-4 space-y-2 mt-4 lg:mt-0">
+        <nav className="flex-1 overflow-y-auto p-4 space-y-2 mt-4">
           {loading ? (
             Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="flex items-center gap-3 px-4 py-3 rounded-lg animate-pulse">

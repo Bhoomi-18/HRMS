@@ -98,9 +98,15 @@ export default function AnnouncementsPage() {
       const matchSearch = a.title.toLowerCase().includes(search.toLowerCase());
       const matchCat = categoryFilter ? a.category === categoryFilter : true;
       const matchPri = priorityFilter ? a.priority === priorityFilter : true;
-      return matchSearch && matchCat && matchPri;
+      
+      let matchScope = true;
+      if (!canManageAnnouncements && a.visibilityScope && a.visibilityScope !== "All") {
+         matchScope = a.visibilityScope === user?.role || a.visibilityScope === "IT"; // Mocking dept match
+      }
+
+      return matchSearch && matchCat && matchPri && matchScope;
     });
-  }, [announcements, search, categoryFilter, priorityFilter]);
+  }, [announcements, search, categoryFilter, priorityFilter, canManageAnnouncements, user]);
 
   const uniqueCategories = Array.from(new Set(announcements.map(a => a.category)));
   const uniquePriorities = Array.from(new Set(announcements.map(a => a.priority)));

@@ -11,5 +11,6 @@ export const PAGE_PERMISSIONS: Record<string, UserRole[]> = {
   documents: ["Admin", "HR Manager", "Employee"],
   recruitment: ["Admin", "HR Manager", "Manager"],
   onboarding: ["Admin", "HR Manager", "Manager", "Employee"],
-  training: ["Admin", "HR Manager", "Manager", "Employee", "Finance"]
+  training: ["Admin", "HR Manager", "Manager", "Employee", "Finance"],
+  contributions: ["Admin", "HR Manager", "Manager", "Employee"]
 };

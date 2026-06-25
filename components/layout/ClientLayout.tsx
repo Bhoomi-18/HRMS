@@ -22,9 +22,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthProvider>
-      <div className="flex h-screen flex-col lg:flex-row overflow-hidden bg-background">
+      <div className="flex h-[100dvh] flex-col overflow-hidden bg-background">
         <Sidebar />
-        <main className="flex-1 flex flex-col h-screen overflow-hidden w-full lg:ml-64">
+        <main className="flex-1 flex flex-col overflow-hidden w-full relative">
           <Navbar />
           <div className="flex-1 overflow-y-auto flex flex-col">
             <Breadcrumb />
@@ -32,7 +32,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
               {children}
             </div>
             {/* Global Footer */}
-            <footer className="w-full border-t border-border py-4 px-6 mt-8 flex flex-col sm:flex-row items-center justify-between text-sm text-muted-foreground bg-background/50 shrink-0">
+            <footer className="w-full border-t border-border py-4 px-6 mt-8 flex flex-col items-center justify-center text-xs text-muted-foreground bg-background/50 shrink-0 text-center gap-1">
               <p>© 2026 HRMS Pro. All rights reserved.</p>
               <p>Developed by Team</p>
             </footer>

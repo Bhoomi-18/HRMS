@@ -37,7 +37,7 @@ export function Sidebar() {
   return (
     <>
       {/* Mobile Hamburger Header */}
-      <div className="flex items-center justify-between bg-background border-b border-border p-4 sticky top-0 z-20">
+      <div className="flex lg:hidden items-center justify-between bg-background border-b border-border p-4 sticky top-0 z-20">
         <span className="font-bold text-lg tracking-wide">HRMS Pro <span className="text-xs text-muted-foreground ml-1">v1.0</span></span>
         <button 
           onClick={() => setIsOpen(!isOpen)} 
@@ -61,15 +61,15 @@ export function Sidebar() {
       {/* Mobile Backdrop */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black/40 z-30 backdrop-blur-sm transition-opacity" 
+          className="fixed inset-0 bg-black/40 z-30 backdrop-blur-sm transition-opacity lg:hidden" 
           onClick={() => setIsOpen(false)} 
         />
       )}
 
       {/* Sidebar Navigation */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 bg-background border-r border-border flex flex-col transform transition-transform duration-300 ease-in-out ${
-          isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"
+        className={`fixed lg:static inset-y-0 left-0 z-40 w-64 bg-background border-r border-border flex flex-col shrink-0 transform lg:transform-none transition-transform duration-300 ease-in-out ${
+          isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"
         }`}
       >
         <div className="flex h-16 items-center justify-center border-b border-border">

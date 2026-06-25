@@ -37,11 +37,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = (userData: User) => {
     setUser(userData);
     localStorage.setItem('hrms-user', JSON.stringify(userData));
+    // Set cookie for Next.js middleware
+    document.cookie = "auth_token=true; path=/; max-age=86400; SameSite=Lax";
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem('hrms-user');
+    // Clear cookie for Next.js middleware
+    document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
   };
 
   const hasRole = (roles: UserRole[]) => {

@@ -3,8 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { ClientLayout } from "../components/layout/ClientLayout";
-import { RoleSwitcher } from "../components/ui/RoleSwitcher";
-import { CopilotWidget } from "../components/ui/CopilotWidget";
 import { Toaster } from "sonner";
 
 const geistSans = Geist({
@@ -37,8 +35,6 @@ export default function RootLayout({
             <ClientLayout>
               {children}
             </ClientLayout>
-            <CopilotWidget />
-            <RoleSwitcher />
             <Toaster position="bottom-center" richColors />
           </Providers>
         </div>

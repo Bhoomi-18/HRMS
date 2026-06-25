@@ -5,6 +5,8 @@ import { Sidebar } from "./Sidebar";
 import { Breadcrumb } from "./Breadcrumb";
 import { Navbar } from "./Navbar";
 import { AuthProvider } from "../../context/AuthContext";
+import { RoleSwitcher } from "../ui/RoleSwitcher";
+import { CopilotWidget } from "../ui/CopilotWidget";
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -38,6 +40,8 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
             </footer>
           </div>
         </main>
+        <RoleSwitcher />
+        <CopilotWidget />
       </div>
     </AuthProvider>
   );

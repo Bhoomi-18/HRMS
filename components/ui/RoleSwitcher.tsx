@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { UserRole } from "../../context/AuthContext";
 
 export function RoleSwitcher() {
-  const { user, setUser } = useAuth();
+  const { user, login } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
   if (!user) return null; // Don't show on login page
@@ -21,8 +21,7 @@ export function RoleSwitcher() {
 
   function switchRole(role: UserRole, name: string) {
     const newUser = { ...user!, role, name };
-    setUser(newUser);
-    localStorage.setItem("hrms-user", JSON.stringify(newUser));
+    login(newUser);
     toast.success(`Switched to ${role} view`);
     setIsOpen(false);
   }
